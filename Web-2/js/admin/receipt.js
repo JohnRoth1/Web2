@@ -596,6 +596,25 @@ const openModal = addHtml => {
         },
         success: function (response) {
           Table.innerHTML = response;
+          
+          // Tính tổng giá từ bảng chi tiết
+          const rows = Table.querySelectorAll("tbody tr");
+          let totalPrice = 0;
+          
+          rows.forEach(row => {
+            // Lấy giá trị từ cột "Tổng Tiền" (cột cuối cùng)
+            const cells = row.querySelectorAll("td");
+            if (cells.length > 0) {
+              const lastCell = cells[cells.length - 1];
+              // Lấy giá trị số từ text (loại bỏ ký tự ₫)
+              const priceText = lastCell.textContent.trim().replace(/[^\d]/g, '');
+              const price = parseInt(priceText) || 0;
+              totalPrice += price;
+            }
+          });
+          
+          // Cập nhật input total_price
+          document.getElementById("total_price").value = totalPrice.toLocaleString('vi-VN');
         },
       });
     });

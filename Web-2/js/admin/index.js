@@ -194,13 +194,13 @@ function renderSiderBars(data) {
     },
     {
       page: "inventory",
-      name: "Quản lý tồn kho",
+      name: "Tồn kho",
       icon: "fa-boxes-stacked",
       fncid: 11,
     },
     {
       page: "pricing",
-      name: "Quản lý giá bán",
+      name: "Giá bán",
       icon: "fa-tag",
       fncid: 12,
     },

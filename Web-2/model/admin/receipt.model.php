@@ -86,16 +86,21 @@ function receipt_detail($field)
                           <th>Tên Sản Phẩm</th>
                           <th>Số Lượng</th>
                           <th>Giá Nhập</th>
+                          <th>Tổng Tiền</th>
                         </tr>
                       </thead>
                       <tbody>';
 
+    $totalPrice = 0;
     foreach ($result as $row) {
+      $totalAmount = $row['quantity'] * $row['input_price'];
+      $totalPrice += $totalAmount;
       $htmlResult .= '<tr>
                             <td style=" width: 10%">' . $row['product_id'] . '</td>
-                            <td style=" width: 55%">' . $row['name'] . '</td>
-                            <td style=" width: 15%">' . $row['quantity'] . '</td>
-                            <td style=" width: 20%">' . number_format($row['input_price']) . '&#8363</td>
+                            <td style=" width: 40%">' . $row['name'] . '</td>
+                            <td style=" width: 12%">' . $row['quantity'] . '</td>
+                            <td style=" width: 17%">' . number_format($row['input_price']) . '&#8363</td>
+                            <td style=" width: 21%">' . number_format($totalAmount) . '&#8363</td>
                             </tr>';
     }
 

@@ -250,6 +250,7 @@ function inventory_getStockAtDate($date = '', $page = 1, $perPage = 8)
       p.id,
       p.name,
       s.name as supplier_name,
+      p.alert_qty,
       COALESCE(SUM(CASE WHEN gr.date_create IS NOT NULL AND DATE(gr.date_create) <= '$date' THEN gd.quantity ELSE 0 END), 0) as total_input,
       COALESCE(SUM(CASE WHEN o.date_create IS NOT NULL AND DATE(o.date_create) <= '$date' AND o.status_id IN (5, 4) THEN od.quantity ELSE 0 END), 0) as total_output,
       (p.quantity + COALESCE(SUM(CASE WHEN gr.date_create IS NOT NULL AND DATE(gr.date_create) <= '$date' THEN gd.quantity ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN o.date_create IS NOT NULL AND DATE(o.date_create) <= '$date' AND o.status_id IN (5, 4) THEN od.quantity ELSE 0 END), 0)) as stock_at_date
@@ -260,7 +261,7 @@ function inventory_getStockAtDate($date = '', $page = 1, $perPage = 8)
     LEFT JOIN order_details od ON od.product_id = p.id
     LEFT JOIN orders o ON od.order_id = o.id
     WHERE p.status = 1
-    GROUP BY p.id, p.name, p.quantity, s.name
+    GROUP BY p.id, p.name, p.quantity, s.name, p.alert_qty
     ORDER BY p.id ASC
     LIMIT $perPage OFFSET $offset
   ";
@@ -338,4 +339,145 @@ function inventory_getProductTransactionsAtDate($product_id, $date = '')
   
   $database->close();
   return $data;
+}
+
+// Lấy danh sách sản phẩm sắp hết hàng (quantity < alert_qty)
+function inventory_getLowStockProducts()
+{
+  $database = new connectDB();
+  
+  $sql = "
+    SELECT 
+      p.id,
+      p.name,
+      p.quantity as current_quantity,
+      p.alert_qty,
+      ROUND((p.quantity / p.alert_qty) * 100, 1) as stock_percentage,
+      s.name as supplier_name,
+      p.price,
+      p.quantity * p.price as total_value
+    FROM products p
+    JOIN suppliers s ON p.supplier_id = s.id
+    WHERE p.status = 1 AND p.quantity < p.alert_qty
+    ORDER BY (p.quantity / p.alert_qty) ASC, p.name ASC
+  ";
+  
+  error_log("inventory_getLowStockProducts - SQL: " . $sql);
+  
+  $result = $database->query($sql);
+  $data = [];
+  
+  if ($result) {
+    while ($row = mysqli_fetch_assoc($result)) {
+      $data[] = $row;
+    }
+    error_log("inventory_getLowStockProducts - Found " . count($data) . " low stock products");
+  } else {
+    error_log("inventory_getLowStockProducts - Query failed: " . $database->conn->error);
+  }
+  
+  $database->close();
+  return $data;
+}
+
+// Đếm số sản phẩm sắp hết hàng
+function inventory_getLowStockCount()
+{
+  $database = new connectDB();
+  
+  $sql = "
+    SELECT COUNT(*) as count
+    FROM products p
+    WHERE p.status = 1 AND p.quantity < p.alert_qty
+  ";
+  
+  $result = $database->query($sql);
+  $row = mysqli_fetch_assoc($result);
+  $count = isset($row['count']) ? intval($row['count']) : 0;
+  
+  $database->close();
+  return $count;
+}
+
+// Cập nhật alert_qty cho một sản phẩm
+function inventory_updateAlertQty($product_id, $alert_qty)
+{
+  $database = new connectDB();
+  
+  $product_id = mysqli_real_escape_string($database->conn, $product_id);
+  $alert_qty = intval($alert_qty);
+  
+  if ($alert_qty < 0) {
+    $database->close();
+    return false;
+  }
+  
+  $sql = "UPDATE products 
+          SET alert_qty = $alert_qty
+          WHERE id = '$product_id'";
+  
+  error_log("inventory_updateAlertQty - SQL: $sql");
+  
+  $result = $database->execute($sql);
+  
+  if (!$result) {
+    error_log("inventory_updateAlertQty - Error: " . $database->conn->error);
+  }
+  
+  $database->close();
+  
+  return $result;
+}
+
+// Cập nhật mức cảnh báo cho TẤT CẢ sản phẩm
+function inventory_setBulkAlertQty($alert_qty)
+{
+  $database = new connectDB();
+  
+  if (!is_numeric($alert_qty) || $alert_qty < 0) {
+    error_log("inventory_setBulkAlertQty - Invalid alert_qty: $alert_qty");
+    $database->close();
+    return false;
+  }
+  
+  $alert_qty = intval($alert_qty);
+  $sql = "UPDATE products 
+          SET alert_qty = $alert_qty
+          WHERE status = 1";
+  
+  error_log("inventory_setBulkAlertQty - SQL: $sql");
+  
+  $result = $database->execute($sql);
+  
+  if (!$result) {
+    error_log("inventory_setBulkAlertQty - Error: " . $database->conn->error);
+  } else {
+    error_log("inventory_setBulkAlertQty - Success: Updated all products to Alert Qty: $alert_qty");
+  }
+  
+  $database->close();
+  
+  return $result;
+}
+
+// Lấy mức cảnh báo mặc định (kiểm tra nếu tất cả sản phẩm có cùng mức)
+function inventory_getDefaultAlertQty()
+{
+  $database = new connectDB();
+  
+  $sql = "SELECT DISTINCT alert_qty, COUNT(*) as product_count 
+          FROM products 
+          WHERE status = 1 
+          GROUP BY alert_qty 
+          ORDER BY product_count DESC 
+          LIMIT 1";
+  
+  $result = $database->query($sql);
+  $database->close();
+  
+  if ($result && $row = mysqli_fetch_assoc($result)) {
+    return (int)$row['alert_qty'];
+  }
+  
+  return 10; // Default value
 }

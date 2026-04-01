@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th3 19, 2026 lúc 01:44 PM
+-- Thời gian đã tạo: Th4 02, 2026 lúc 12:29 AM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.0.30
 
@@ -391,7 +391,8 @@ INSERT INTO `functions` (`id`, `name`, `status`, `delete_date`, `update_date`) V
 (9, 'Quản lý nhập hàng', 1, NULL, NULL),
 (10, 'Quản lý phân quyền', 1, NULL, NULL),
 (11, 'Quản lý khuyển mãi', 1, NULL, NULL),
-(12, 'Quản lý giá bán', 1, NULL, NULL);
+(12, 'Quản lý giá bán', 1, NULL, NULL),
+(13, 'Quản lý giá bán', 1, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -433,7 +434,9 @@ INSERT INTO `function_details` (`function_id`, `role_id`, `action`) VALUES
 (11, 1, 1),
 (11, 2, 1),
 (12, 1, 1),
-(12, 2, 1);
+(12, 2, 1),
+(13, 1, 1),
+(13, 2, 1);
 
 -- --------------------------------------------------------
 
@@ -448,6 +451,16 @@ CREATE TABLE `goodsreceipts` (
   `date_create` date NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Đang đổ dữ liệu cho bảng `goodsreceipts`
+--
+
+INSERT INTO `goodsreceipts` (`id`, `staff_id`, `total_price`, `date_create`) VALUES
+(1, 'admin', 5232000, '2026-04-02'),
+(2, 'staff', 4900000, '2026-03-20'),
+(3, 'admin', 1430400, '2026-04-02'),
+(5, 'admin', 110585000, '2026-04-02');
+
 -- --------------------------------------------------------
 
 --
@@ -460,6 +473,53 @@ CREATE TABLE `goodsreceipt_details` (
   `quantity` int(11) NOT NULL,
   `input_price` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `goodsreceipt_details`
+--
+
+INSERT INTO `goodsreceipt_details` (`product_id`, `goodsreceipt_id`, `quantity`, `input_price`) VALUES
+(21, 1, 12, 436000),
+(1, 1, 20, 80000),
+(2, 1, 30, 120000),
+(43, 2, 50, 50000),
+(44, 2, 40, 60000),
+(22, 3, 12, 119200),
+(1, 5, 24, 109000),
+(2, 5, 29, 169000),
+(3, 5, 13, 196000),
+(4, 5, 3, 108000),
+(5, 5, 5, 158000),
+(6, 5, 16, 450000),
+(7, 5, 3, 99000),
+(8, 5, 24, 75000),
+(9, 5, 25, 135000),
+(10, 5, 20, 139000),
+(11, 5, 26, 148000),
+(12, 5, 8, 115000),
+(13, 5, 21, 118000),
+(14, 5, 18, 138000),
+(15, 5, 28, 169000),
+(16, 5, 27, 216000),
+(17, 5, 20, 59000),
+(18, 5, 16, 189000),
+(19, 5, 19, 289000),
+(20, 5, 18, 99000),
+(21, 5, 14, 545000),
+(22, 5, 23, 149000),
+(23, 5, 20, 259000),
+(27, 5, 9, 149000),
+(39, 5, 9, 138000),
+(40, 5, 20, 239000),
+(41, 5, 12, 135000),
+(42, 5, 28, 259000),
+(43, 5, 17, 76000),
+(44, 5, 26, 86000),
+(45, 5, 21, 189000),
+(46, 5, 24, 119000),
+(47, 5, 29, 179000),
+(48, 5, 12, 108000),
+(49, 5, 29, 99000);
 
 -- --------------------------------------------------------
 
@@ -542,50 +602,52 @@ CREATE TABLE `products` (
   `update_date` date NOT NULL,
   `price` double NOT NULL,
   `quantity` int(11) NOT NULL,
+  `alert_qty` int(11) DEFAULT 10,
   `supplier_id` int(11) NOT NULL,
-  `status` tinyint(1) NOT NULL
+  `status` tinyint(1) NOT NULL,
+  `profit_margin` float DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Đang đổ dữ liệu cho bảng `products`
 --
 
-INSERT INTO `products` (`id`, `name`, `publisher_id`, `image_path`, `create_date`, `update_date`, `price`, `quantity`, `supplier_id`, `status`) VALUES
-(1, 'THAO TÚNG CẢM XÚC: LÀM SAO THOÁT KHỎI CHIẾC BẪY VÔ', 3, 'assets/images/product/image_1.jpg', '2025-04-01', '2025-04-01', 109000, 24, 1, 1),
-(2, 'TỰ DO KHÔNG YÊU ĐƯƠNG', 4, 'assets/images/product/image_2.jpg', '2025-04-01', '2025-04-01', 169000, 29, 1, 1),
-(3, 'ĐỪNG THÁCH THỨC NHÂN TÍNH', 5, 'assets/images/product/image_3.jpg', '2025-04-01', '2025-04-01', 196000, 13, 1, 1),
-(4, 'NÓI LUÔN CHO NÓ VUÔNG', 6, 'assets/images/product/image_4.jpg', '2025-04-01', '2025-04-01', 108000, 3, 1, 1),
-(5, 'TRẮC ẨN VỚI CHÍNH MÌNH', 7, 'assets/images/product/image_5.jpg', '2025-04-01', '2025-04-01', 158000, 5, 1, 1),
-(6, 'CON NGƯỜI VÀ BIỂU TƯỢNG', 6, 'assets/images/product/image_6.jpg', '2025-04-01', '2025-04-01', 450000, 16, 1, 1),
-(7, 'DÁM SỐNG HƯỚNG NỘI VÀ CỰC KỲ NHẠY CẢM', 6, 'assets/images/product/image_7.jpg', '2025-04-01', '2025-04-01', 99000, 3, 1, 1),
-(8, 'TỚ ĐÃ TỪNG SỢ HÃI - LỜI KHUYÊN TỪ CHUYÊN GIA TÂM L', 5, 'assets/images/product/image_8.jpg', '2025-04-01', '2025-04-01', 75000, 24, 1, 1),
-(9, 'NGHIÊN CỨU PHÂN TÂM HỌC', 6, 'assets/images/product/image_9.jpg', '2025-04-01', '2025-04-01', 135000, 25, 1, 1),
-(10, 'TƯ DUY NHƯ NHÀ TÂM LÝ HỌC', 6, 'assets/images/product/image_10.jpg', '2025-04-01', '2025-04-01', 139000, 20, 1, 1),
-(11, 'CON QUÁI VẬT TRONG TÂM TRÍ – NHỮNG CA BỆNH TÂM LÝ ', 3, 'assets/images/product/image_11.jpg', '2025-04-01', '2025-04-01', 148000, 26, 1, 1),
-(12, 'LÝ DO ĐỂ SỐNG TIẾP', 8, 'assets/images/product/image_12.jpg', '2025-04-01', '2025-04-01', 115000, 8, 1, 1),
-(13, 'THIỀN ĐỊNH MỖI NGÀY', 5, 'assets/images/product/image_13.jpg', '2025-04-01', '2025-04-01', 118000, 21, 1, 1),
-(14, 'MỌI VIỆC ĐỀU CÓ THỂ GIẢI QUYẾT - THÁO GỠ KHÓ KHĂN ', 5, 'assets/images/product/image_14.jpg', '2025-04-01', '2025-04-01', 138000, 18, 1, 1),
-(15, 'LÀM SAO HỌC HẾT ĐƯỢC NHÂN SINH', 5, 'assets/images/product/image_15.jpg', '2025-04-01', '2025-04-01', 169000, 28, 1, 1),
-(16, 'CHIÊM TINH PHÙ THỦY - ÚM BA LA ... SOI RA TÍNH CÁC', 6, 'assets/images/product/image_16.jpg', '2025-04-01', '2025-04-01', 216000, 27, 1, 1),
-(17, 'BÙA CHÚ - GIẢI THÍCH CÁC TRÒ MẸO VÀ PHÉP BÍ THUẬT ', 6, 'assets/images/product/image_17.jpg', '2025-04-01', '2025-04-01', 59000, 20, 1, 1),
-(18, 'NGÀY TẬN THẾ - LỜI TIÊN TRI VỀ TƯƠNG LAI VÀ THẾ GI', 9, 'assets/images/product/image_18.jpg', '2025-04-01', '2025-04-01', 189000, 16, 1, 1),
-(19, 'TANG LỄ CỦA NGƯỜI AN NAM (BÌA CỨNG)', 6, 'assets/images/product/image_19.jpg', '2025-04-01', '2025-04-01', 289000, 19, 1, 1),
-(20, 'CÁ HỒI - HÀNH TRÌNH TỈNH THỨC', 4, 'assets/images/product/image_20.jpg', '2025-04-01', '2025-04-01', 99000, 18, 1, 1),
-(21, 'Ba Đồn mạn thuật', 2, 'assets/images/product/image_21.jpg', '2025-04-01', '2025-04-01', 545000, 2, 2, 1),
-(22, 'Bộ Sách Hội Kín', 2, 'assets/images/product/image_22.jpg', '2025-04-01', '2025-04-01', 149000, 11, 2, 1),
-(23, 'Chìm nổi ở Sài Gòn – Những cảnh đời bần cùng ở một', 2, 'assets/images/product/image_23.jpg', '2025-04-01', '2025-04-01', 259000, 20, 2, 1),
-(27, 'Tâm lý Dân Tộc An Nam', 2, 'assets/images/product/image_27.jpg', '2025-04-01', '2025-04-01', 149000, 9, 2, 1),
-(39, 'Năm Tháng Tĩnh Lặng, Kiếp Này Bình Yên', 10, 'assets/images/product/image_39.jpg', '2025-04-01', '2025-04-01', 138000, 9, 3, 1),
-(40, 'Eo Thon Nhỏ', 11, 'assets/images/product/image_40.jpg', '2025-04-01', '2025-04-01', 239000, 20, 3, 1),
-(41, 'Mãi Mãi Là Bao Xa', 11, 'assets/images/product/image_41.jpg', '2025-04-01', '2025-04-01', 135000, 12, 3, 1),
-(42, 'Chỉ Muốn Thương Anh, Chiều Anh, Nuôi Anh', 8, 'assets/images/product/image_42.jpg', '2025-04-01', '2025-04-01', 259000, 28, 3, 1),
-(43, 'Bến Xe', 8, 'assets/images/product/image_43.jpg', '2025-04-01', '2025-04-01', 76000, 17, 3, 1),
-(44, 'Thất Tịch Không Mưa', 4, 'assets/images/product/image_44.jpg', '2025-04-01', '2025-04-01', 86000, 26, 3, 1),
-(45, 'Rung Động Chỉ Vì Em', 3, 'assets/images/product/image_45.jpg', '2025-04-01', '2025-04-01', 189000, 21, 3, 1),
-(46, 'All In Love - Ngập Tràn Yêu Thương', 4, 'assets/images/product/image_46.jpg', '2025-04-01', '2025-04-01', 119000, 24, 3, 1),
-(47, 'Yêu Em Từ Cái Nhìn Đầu Tiên', 8, 'assets/images/product/image_47.jpg', '2025-04-01', '2025-04-01', 179000, 29, 3, 1),
-(48, 'Em Vốn Thích Cô Độc, Cho Đến Khi Có Anh', 8, 'assets/images/product/image_48.jpg', '2025-04-01', '2025-04-01', 108000, 12, 3, 1),
-(49, 'Chờ Em Lớn Nhé Được Không?', 8, 'assets/images/product/image_49.jpg', '2025-04-01', '2025-04-01', 99000, 29, 3, 1);
+INSERT INTO `products` (`id`, `name`, `publisher_id`, `image_path`, `create_date`, `update_date`, `price`, `quantity`, `alert_qty`, `supplier_id`, `status`, `profit_margin`) VALUES
+(1, 'THAO TÚNG CẢM XÚC: LÀM SAO THOÁT KHỎI CHIẾC BẪY VÔ', 3, 'assets/images/product/image_1.jpg', '2025-04-01', '2025-04-01', 109000, 24, 8, 1, 1, 0),
+(2, 'TỰ DO KHÔNG YÊU ĐƯƠNG', 4, 'assets/images/product/image_2.jpg', '2025-04-01', '2025-04-01', 169000, 29, 8, 1, 1, 0),
+(3, 'ĐỪNG THÁCH THỨC NHÂN TÍNH', 5, 'assets/images/product/image_3.jpg', '2025-04-01', '2025-04-01', 196000, 13, 8, 1, 1, 0),
+(4, 'NÓI LUÔN CHO NÓ VUÔNG', 6, 'assets/images/product/image_4.jpg', '2025-04-01', '2025-04-01', 108000, 3, 8, 1, 1, 0),
+(5, 'TRẮC ẨN VỚI CHÍNH MÌNH', 7, 'assets/images/product/image_5.jpg', '2025-04-01', '2026-04-02', 173800, 5, 8, 1, 1, 0),
+(6, 'CON NGƯỜI VÀ BIỂU TƯỢNG', 6, 'assets/images/product/image_6.jpg', '2025-04-01', '2025-04-01', 450000, 16, 8, 1, 1, 0),
+(7, 'DÁM SỐNG HƯỚNG NỘI VÀ CỰC KỲ NHẠY CẢM', 6, 'assets/images/product/image_7.jpg', '2025-04-01', '2025-04-01', 99000, 3, 8, 1, 1, 0),
+(8, 'TỚ ĐÃ TỪNG SỢ HÃI - LỜI KHUYÊN TỪ CHUYÊN GIA TÂM L', 5, 'assets/images/product/image_8.jpg', '2025-04-01', '2025-04-01', 75000, 24, 8, 1, 1, 0),
+(9, 'NGHIÊN CỨU PHÂN TÂM HỌC', 6, 'assets/images/product/image_9.jpg', '2025-04-01', '2025-04-01', 135000, 25, 8, 1, 1, 0),
+(10, 'TƯ DUY NHƯ NHÀ TÂM LÝ HỌC', 6, 'assets/images/product/image_10.jpg', '2025-04-01', '2025-04-01', 139000, 20, 8, 1, 1, 0),
+(11, 'CON QUÁI VẬT TRONG TÂM TRÍ – NHỮNG CA BỆNH TÂM LÝ ', 3, 'assets/images/product/image_11.jpg', '2025-04-01', '2025-04-01', 148000, 26, 8, 1, 1, 0),
+(12, 'LÝ DO ĐỂ SỐNG TIẾP', 8, 'assets/images/product/image_12.jpg', '2025-04-01', '2025-04-01', 115000, 8, 8, 1, 1, 0),
+(13, 'THIỀN ĐỊNH MỖI NGÀY', 5, 'assets/images/product/image_13.jpg', '2025-04-01', '2025-04-01', 118000, 21, 8, 1, 1, 0),
+(14, 'MỌI VIỆC ĐỀU CÓ THỂ GIẢI QUYẾT - THÁO GỠ KHÓ KHĂN ', 5, 'assets/images/product/image_14.jpg', '2025-04-01', '2025-04-01', 138000, 18, 8, 1, 1, 0),
+(15, 'LÀM SAO HỌC HẾT ĐƯỢC NHÂN SINH', 5, 'assets/images/product/image_15.jpg', '2025-04-01', '2025-04-01', 169000, 28, 8, 1, 1, 0),
+(16, 'CHIÊM TINH PHÙ THỦY - ÚM BA LA ... SOI RA TÍNH CÁC', 6, 'assets/images/product/image_16.jpg', '2025-04-01', '2025-04-01', 216000, 27, 8, 1, 1, 0),
+(17, 'BÙA CHÚ - GIẢI THÍCH CÁC TRÒ MẸO VÀ PHÉP BÍ THUẬT ', 6, 'assets/images/product/image_17.jpg', '2025-04-01', '2025-04-01', 59000, 20, 8, 1, 1, 0),
+(18, 'NGÀY TẬN THẾ - LỜI TIÊN TRI VỀ TƯƠNG LAI VÀ THẾ GI', 9, 'assets/images/product/image_18.jpg', '2025-04-01', '2025-04-01', 189000, 16, 8, 1, 1, 0),
+(19, 'TANG LỄ CỦA NGƯỜI AN NAM (BÌA CỨNG)', 6, 'assets/images/product/image_19.jpg', '2025-04-01', '2025-04-01', 289000, 19, 8, 1, 1, 0),
+(20, 'CÁ HỒI - HÀNH TRÌNH TỈNH THỨC', 4, 'assets/images/product/image_20.jpg', '2025-04-01', '2025-04-01', 99000, 18, 8, 1, 1, 0),
+(21, 'Ba Đồn mạn thuật', 2, 'assets/images/product/image_21.jpg', '2025-04-01', '2025-04-01', 545000, 14, 8, 2, 1, 0),
+(22, 'Bộ Sách Hội Kín', 2, 'assets/images/product/image_22.jpg', '2025-04-01', '2025-04-01', 149000, 23, 8, 2, 1, 0),
+(23, 'Chìm nổi ở Sài Gòn – Những cảnh đời bần cùng ở một', 2, 'assets/images/product/image_23.jpg', '2025-04-01', '2025-04-01', 259000, 20, 8, 2, 1, 0),
+(27, 'Tâm lý Dân Tộc An Nam', 2, 'assets/images/product/image_27.jpg', '2025-04-01', '2025-04-01', 149000, 9, 8, 2, 1, 0),
+(39, 'Năm Tháng Tĩnh Lặng, Kiếp Này Bình Yên', 10, 'assets/images/product/image_39.jpg', '2025-04-01', '2025-04-01', 138000, 9, 8, 3, 1, 0),
+(40, 'Eo Thon Nhỏ', 11, 'assets/images/product/image_40.jpg', '2025-04-01', '2025-04-01', 239000, 20, 8, 3, 1, 0),
+(41, 'Mãi Mãi Là Bao Xa', 11, 'assets/images/product/image_41.jpg', '2025-04-01', '2025-04-01', 135000, 12, 8, 3, 1, 0),
+(42, 'Chỉ Muốn Thương Anh, Chiều Anh, Nuôi Anh', 8, 'assets/images/product/image_42.jpg', '2025-04-01', '2025-04-01', 259000, 28, 8, 3, 1, 0),
+(43, 'Bến Xe', 8, 'assets/images/product/image_43.jpg', '2025-04-01', '2025-04-01', 76000, 17, 8, 3, 1, 0),
+(44, 'Thất Tịch Không Mưa', 4, 'assets/images/product/image_44.jpg', '2025-04-01', '2025-04-01', 86000, 26, 8, 3, 1, 0),
+(45, 'Rung Động Chỉ Vì Em', 3, 'assets/images/product/image_45.jpg', '2025-04-01', '2025-04-01', 189000, 21, 8, 3, 1, 0),
+(46, 'All In Love - Ngập Tràn Yêu Thương', 4, 'assets/images/product/image_46.jpg', '2025-04-01', '2025-04-01', 119000, 24, 8, 3, 1, 0),
+(47, 'Yêu Em Từ Cái Nhìn Đầu Tiên', 8, 'assets/images/product/image_47.jpg', '2025-04-01', '2025-04-01', 179000, 29, 8, 3, 1, 0),
+(48, 'Em Vốn Thích Cô Độc, Cho Đến Khi Có Anh', 8, 'assets/images/product/image_48.jpg', '2025-04-01', '2025-04-01', 108000, 12, 8, 3, 1, 0),
+(49, 'Chờ Em Lớn Nhé Được Không?', 8, 'assets/images/product/image_49.jpg', '2025-04-01', '2025-04-01', 99000, 29, 8, 3, 1, 0);
 
 -- --------------------------------------------------------
 
@@ -850,7 +912,7 @@ ALTER TABLE `functions`
 -- AUTO_INCREMENT cho bảng `goodsreceipts`
 --
 ALTER TABLE `goodsreceipts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT cho bảng `orders`

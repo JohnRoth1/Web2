@@ -96,6 +96,57 @@
   background-color: #e0e0e0;
 }
 
+/* Alert Messages */
+.alert {
+  padding: 12px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideInDown 0.3s ease;
+}
+
+.alert i {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Table Section */
 .table-section {
   background-color: white;
@@ -395,4 +446,418 @@
   100% {
     transform: rotate(360deg);
   }
+}
+
+/* Subtabs Container */
+.inventory-subtabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #ddd;
+  background-color: transparent;
+  padding: 10px 0;
+  border-radius: 0;
+  flex-wrap: wrap;
+}
+
+.subtab-btn {
+  padding: 12px 20px;
+  border: none;
+  background-color: transparent;
+  color: #666;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  margin-bottom: -10px;
+}
+
+.subtab-btn:hover {
+  color: #0077B6;
+}
+
+.subtab-btn.active {
+  color: #0077B6;
+  border-bottom-color: #0077B6;
+}
+
+/* Badge for count displayed next to tab label */
+.subtab-badge {
+  display: inline-block;
+  background-color: #e74c3c;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 5px;
+}
+
+.subtab-badge.hidden {
+  display: none;
+}
+
+/* Badge in subtab context (low stock count) */
+.inventory-subtabs .badge {
+  display: inline-block;
+  background-color: #e74c3c;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 5px;
+}
+
+/* Tab Content - hide by default */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Low Stock Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.status-badge.critical {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status-badge.warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status-badge.notice {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+/* In Stock / Out of Stock Status */
+.status-badge.status-in-stock {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-badge.status-out-stock {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Stock Percentage Display */
+.stock-percentage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.stock-bar {
+  width: 100px;
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.stock-bar-fill {
+  height: 100%;
+  background-color: #28a745;
+  transition: width 0.3s ease;
+}
+
+.stock-bar-fill.critical {
+  background-color: #dc3545;
+}
+
+.stock-bar-fill.warning {
+  background-color: #ffc107;
+}
+
+.stock-bar-fill.notice {
+  background-color: #17a2b8;
+}
+
+/* Modal for Alert Qty */
+.modal-alert-qty {
+  max-width: 500px;
+}
+
+.modal-alert-qty .modal-body {
+  padding: 30px 20px;
+}
+
+.modal-alert-qty .filter-field {
+  margin-bottom: 15px;
+}
+
+.modal-alert-qty .modal-footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 15px 20px;
+  border-top: 1px solid #ddd;
+}
+
+.btn-save,
+.btn-cancel {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-save {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-save:hover {
+  background-color: #218838;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-cancel {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.btn-cancel:hover {
+  background-color: #e0e0e0;
+}
+
+/* Low Stock Table Specific Styles */
+.lowstock-table .badge-qty {
+  font-weight: 600;
+  color: #e74c3c;
+  font-size: 13px;
+}
+
+.btn-edit-alert,
+.lowstock-table .btn-edit {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  background-color: #0077B6;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-edit-alert:hover,
+.lowstock-table .btn-edit:hover {
+  background-color: #005f96;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 119, 182, 0.3);
+}
+
+/* Filter section toggle */
+.filter-section.hidden {
+  display: none;
+}
+
+.filter-section {
+  display: block;
+}
+
+/* Settings Toggle Section */
+.settings-toggle-section {
+  margin-bottom: 15px;
+}
+
+.btn-toggle-settings {
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  width: 100%;
+  max-width: 300px;
+}
+
+.btn-toggle-settings:hover {
+  background-color: #e9ecef;
+  border-color: #0077B6;
+}
+
+.btn-toggle-settings i {
+  transition: transform 0.3s ease;
+}
+
+/* Global Settings Section */
+.global-settings-section {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 2px solid #0077B6;
+  border-left: 4px solid #0077B6;
+}
+
+.global-settings-section h3 {
+  margin-top: 0;
+  color: #0077B6;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.global-settings-section > p {
+  margin: 0 0 15px 0;
+  color: #666;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group-inline {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.form-group {
+  flex: 1;
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 500;
+  margin-bottom: 5px;
+  color: #555;
+  font-size: 14px;
+}
+
+.form-group input {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #0077B6;
+  box-shadow: 0 0 5px rgba(0, 119, 182, 0.3);
+}
+
+.form-group small {
+  margin-top: 5px;
+  color: #999;
+  font-size: 12px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-apply-bulk {
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-apply-bulk:hover {
+  background-color: #218838;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+  transform: translateY(-2px);
+}
+
+#btnSetBulkAlertQty {
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+#btnSetBulkAlertQty:hover {
+  background-color: #218838;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+  transform: translateY(-2px);
+}
+
+#btnSetBulkAlertQty:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.settings-info {
+  padding: 12px;
+  background-color: #f0f8ff;
+  border-left: 4px solid #0077B6;
+  border-radius: 4px;
+  color: #0c5460;
+}
+
+.settings-info p {
+  margin: 0;
+  font-size: 13px;
 }

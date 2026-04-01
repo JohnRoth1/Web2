@@ -50,6 +50,44 @@
   box-shadow: 0 0 5px rgba(76, 175, 80, 0.2);
 }
 
+/* Profit Margin Section */
+.profit-margin-section {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #FF9800;
+}
+
+.profit-margin-section h3 {
+  margin-top: 0;
+  color: #FF9800;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.margin-form {
+  background: #f9f9f9;
+  padding: 15px;
+  border-radius: 4px;
+}
+
+.form-group-inline {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .table-section {
   background: white;
   padding: 20px;
@@ -313,4 +351,276 @@
   background: #e8f5e9;
   padding: 10px;
   border-radius: 4px;
+}
+
+/* ============ SUBTAB STYLES ============ */
+.subtab-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #ddd;
+}
+
+.subtab-btn {
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #666;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.subtab-btn:hover {
+  color: #333;
+}
+
+.subtab-btn.active {
+  color: #4CAF50;
+  border-bottom-color: #4CAF50;
+}
+
+/* ============ FILTER GROUP VARIANTS ============ */
+.filter-group-by-product,
+.filter-group-by-batch {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.filter-group-by-batch.active-filter {
+  display: flex;
+}
+
+.btn-filter {
+  padding: 10px 20px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-filter:hover {
+  background: #45a049;
+}
+
+/* ============ TABLE VIEW VARIANTS ============ */
+.table-section {
+  display: none;
+}
+
+.table-section.active-view {
+  display: block;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ============ BATCH DETAILS TABLE ============ */
+.batch-details-table {
+  font-size: 13px;
+}
+
+.batch-details-table th {
+  background: #f8f9fa;
+  padding: 10px;
+}
+
+.batch-details-table td {
+  padding: 10px;
+}
+
+/* ============ BATCH INFO SECTION ============ */
+.batch-info-section {
+  background: #e3f2fd;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  border-left: 4px solid #2196F3;
+}
+
+.batch-info-section p {
+  margin: 5px 0;
+  color: #1976d2;
+  font-size: 14px;
+}
+
+/* ============ PAGINATION STYLES ============ */
+.pagination-container {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.pagination-info {
+  color: #666;
+  font-size: 13px;
+  min-width: 200px;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-pagination {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-pagination:hover:not(:disabled) {
+  border-color: #4CAF50;
+  color: #4CAF50;
+}
+
+.btn-pagination:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 5px;
+}
+
+.batch-page-btn {
+  padding: 4px 8px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s;
+}
+
+.batch-page-btn:hover {
+  border-color: #4CAF50;
+  color: #4CAF50;
+}
+
+.batch-page-btn.active {
+  background: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
+
+/* ============ BATCH ACTION BUTTONS ============ */
+.btn-edit-batch-margin {
+  background: #FF9800;
+  color: white;
+}
+
+.btn-edit-batch-margin:hover {
+  background: #F57C00;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
+.btn-view-batch-details {
+  background: #2196F3;
+  color: white;
+}
+
+.btn-view-batch-details:hover {
+  background: #1976D2;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+/* ============ MODAL FOOTER ============ */
+.modal-footer {
+  padding: 15px 20px;
+  border-top: 1px solid #eee;
+  text-align: right;
+}
+
+.btn-close {
+  padding: 8px 16px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+
+.btn-close:hover {
+  background: #5a6268;
+}
+
+/* ============ MODAL LARGE ============ */
+.modal-content.modal-large {
+  max-width: 900px;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 768px) {
+  .subtab-container {
+    flex-wrap: wrap;
+  }
+
+  .filter-group-by-product,
+  .filter-group-by-batch {
+    flex-direction: column;
+  }
+
+  .filter-field input,
+  .btn-filter {
+    width: 100%;
+  }
+
+  .pagination-container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pagination-buttons {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .data-table {
+    font-size: 12px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px;
+  }
+
+  .modal-content {
+    max-width: 90%;
+  }
+
+  .modal-content.modal-large {
+    max-width: 95%;
+  }
 }

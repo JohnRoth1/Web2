@@ -1,5 +1,46 @@
 <?php
 
+// Lấy giá nhập bình quân của sản phẩm
+function pricing_getAverageCostPrice($product_id)
+{
+  $database = new connectDB();
+  $product_id = mysqli_real_escape_string($database->conn, $product_id);
+  
+  // Lấy tất cả phiếu nhập cho sản phẩm (sắp xếp theo ngày)
+  $sql = "
+    SELECT gd.quantity as input_quantity, gd.input_price, gr.date_create
+    FROM goodsreceipt_details gd
+    JOIN goodsreceipts gr ON gd.goodsreceipt_id = gr.id
+    WHERE gd.product_id = '$product_id'
+    ORDER BY gr.date_create ASC, gr.id ASC
+  ";
+  
+  $result = $database->query($sql);
+  $totalQuantity = 0;
+  $totalCost = 0;
+  $averagePrice = 0;
+  
+  error_log("pricing_getAverageCostPrice - Product ID: $product_id");
+  
+  if ($result && mysqli_num_rows($result) > 0) {
+    while ($row = mysqli_fetch_assoc($result)) {
+      $inputQty = intval($row['input_quantity']);
+      $inputPrice = floatval($row['input_price']);
+      
+      // Công thức BÌNH QUÂN: (số lượng tồn × giá hiện tại + số lượng nhập × giá nhập mới) / (số lượng tồn + số lượng nhập)
+      $totalCost = ($totalQuantity * $averagePrice) + ($inputQty * $inputPrice);
+      $totalQuantity += $inputQty;
+      $averagePrice = $totalQuantity > 0 ? $totalCost / $totalQuantity : $inputPrice;
+      
+      error_log("  Step - Qty: $inputQty, Price: $inputPrice, Avg: $averagePrice");
+    }
+  }
+  
+  error_log("pricing_getAverageCostPrice - Final Average Price: $averagePrice");
+  $database->close();
+  return $averagePrice > 0 ? $averagePrice : 0;
+}
+
 function pricing_getProducts()
 {
   $database = new connectDB();
@@ -58,42 +99,210 @@ function pricing_applyMargin($product_id, $margin_percent)
   $product_id = mysqli_real_escape_string($database->conn, $product_id);
   $margin_percent = floatval($margin_percent);
   
-  // Get current input price (cost price)
-  $sql = "SELECT id FROM goodsreceipt_details WHERE product_id = '$product_id' ORDER BY id DESC LIMIT 1";
-  $result = $database->query($sql);
+  error_log("pricing_applyMargin - Product ID: $product_id, Margin: $margin_percent%");
   
-  if ($result && mysqli_num_rows($result) > 0) {
-    $row = mysqli_fetch_assoc($result);
-    $grd_id = $row['id'];
+  // Lấy giá nhập bình quân
+  $average_cost_price = pricing_getAverageCostPrice($product_id);
+  
+  if ($average_cost_price > 0) {
+    // Tính giá bán: Giá nhập × (100% + tỷ lệ lợi nhuận)
+    // VD: giá nhập 100, lợi nhuận 20% => giá bán = 100 × 1.2 = 120
+    $new_price = $average_cost_price * (1 + $margin_percent / 100);
     
-    // Get input_price from the latest goods receipt
-    $sql_price = "SELECT input_price FROM goodsreceipt_details WHERE product_id = '$product_id' ORDER BY id DESC LIMIT 1";
-    $result_price = $database->query($sql_price);
+    error_log("pricing_applyMargin - Cost: $average_cost_price, New Price: $new_price");
     
-    if ($result_price && mysqli_num_rows($result_price) > 0) {
-      $price_row = mysqli_fetch_assoc($result_price);
-      $input_price = floatval($price_row['input_price']);
-      
-      // Calculate selling price: input_price * (1 + margin_percent/100)
-      $new_price = $input_price * (1 + $margin_percent / 100);
-      
-      // Update product price
-      $sql_update = "UPDATE products 
-                     SET price = '$new_price', update_date = '$date' 
-                     WHERE id = '$product_id'";
-      
-      $update_result = $database->execute($sql_update);
-      $database->close();
-      
-      return array(
-        'success' => $update_result,
-        'input_price' => $input_price,
-        'new_price' => round($new_price, 2),
-        'margin' => $margin_percent
-      );
-    }
+    // Update product price
+    $sql_update = "UPDATE products 
+                   SET price = '$new_price', update_date = '$date' 
+                   WHERE id = '$product_id'";
+    
+    $update_result = $database->execute($sql_update);
+    $database->close();
+    
+    return array(
+      'success' => $update_result,
+      'cost_price' => round($average_cost_price, 2),
+      'new_price' => round($new_price, 2),
+      'margin' => $margin_percent
+    );
   }
   
   $database->close();
   return array('success' => false, 'message' => 'Không tìm thấy giá nhập cho sản phẩm này');
+}
+
+// Lấy danh sách lô hàng (goods receipts) với pagination
+function pricing_getReceipts($search = '', $page = 1, $perPage = 10)
+{
+  $database = new connectDB();
+  $search = mysqli_real_escape_string($database->conn, $search);
+  
+  // Build search condition
+  $searchCondition = "";
+  if (!empty($search)) {
+    $searchCondition = "WHERE 
+      gr.id LIKE '%$search%' 
+      OR DATE_FORMAT(gr.date_create, '%d/%m/%Y') LIKE '%$search%'
+      OR p.id LIKE '%$search%'
+      OR p.name LIKE '%$search%'
+      OR s.name LIKE '%$search%'";
+  }
+  
+  // Count total records for pagination
+  $countSql = "
+    SELECT COUNT(DISTINCT gr.id) as total
+    FROM goodsreceipts gr
+    LEFT JOIN goodsreceipt_details grd ON gr.id = grd.goodsreceipt_id
+    LEFT JOIN products p ON grd.product_id = p.id
+    LEFT JOIN suppliers s ON p.supplier_id = s.id
+    $searchCondition
+  ";
+  
+  error_log("pricing_getReceipts - CountSQL: " . $countSql);
+  
+  $countResult = $database->query($countSql);
+  if (!$countResult) {
+    error_log("pricing_getReceipts - Count query failed: " . $database->conn->error);
+    $database->close();
+    return [
+      'total' => 0,
+      'totalPages' => 0,
+      'currentPage' => $page,
+      'perPage' => $perPage,
+      'data' => []
+    ];
+  }
+  
+  $countRow = mysqli_fetch_assoc($countResult);
+  $totalRecords = isset($countRow['total']) ? intval($countRow['total']) : 0;
+  $totalPages = $totalRecords > 0 ? ceil($totalRecords / $perPage) : 1;
+  
+  // Get paginated records
+  $offset = ($page - 1) * $perPage;
+  
+  $sql = "
+    SELECT 
+      gr.id as batch_id,
+      DATE_FORMAT(gr.date_create, '%d/%m/%Y') as date_create,
+      COUNT(grd.product_id) as product_count,
+      GROUP_CONCAT(DISTINCT s.name SEPARATOR ', ') as supplier_name
+    FROM goodsreceipts gr
+    LEFT JOIN goodsreceipt_details grd ON gr.id = grd.goodsreceipt_id
+    LEFT JOIN products p ON grd.product_id = p.id
+    LEFT JOIN suppliers s ON p.supplier_id = s.id
+    $searchCondition
+    GROUP BY gr.id
+    ORDER BY gr.date_create DESC
+    LIMIT $offset, $perPage
+  ";
+  
+  error_log("pricing_getReceipts - SQL: " . $sql);
+  
+  $result = $database->query($sql);
+  $data = [];
+  
+  if (!$result) {
+    error_log("pricing_getReceipts - Query failed: " . $database->conn->error);
+    $database->close();
+    return [
+      'total' => 0,
+      'totalPages' => 0,
+      'currentPage' => $page,
+      'perPage' => $perPage,
+      'data' => []
+    ];
+  }
+  
+  while ($row = mysqli_fetch_assoc($result)) {
+    $data[] = $row;
+  }
+  
+  error_log("pricing_getReceipts - Retrieved " . count($data) . " batches");
+  
+  $database->close();
+  
+  return [
+    'total' => $totalRecords,
+    'totalPages' => $totalPages,
+    'currentPage' => $page,
+    'perPage' => $perPage,
+    'data' => $data
+  ];
+}
+
+// Lấy chi tiết sản phẩm trong một lô hàng
+function pricing_getBatchDetails($batch_id)
+{
+  $database = new connectDB();
+  $batch_id = mysqli_real_escape_string($database->conn, $batch_id);
+  
+  $sql = "
+    SELECT 
+      grd.product_id,
+      p.name as product_name,
+      grd.quantity as input_quantity,
+      grd.input_price as cost_price,
+      p.price as current_selling_price,
+      s.name as supplier_name,
+      DATE_FORMAT(gr.date_create, '%d/%m/%Y') as batch_date
+    FROM goodsreceipt_details grd
+    JOIN goodsreceipts gr ON grd.goodsreceipt_id = gr.id
+    JOIN products p ON grd.product_id = p.id
+    JOIN suppliers s ON p.supplier_id = s.id
+    WHERE grd.goodsreceipt_id = '$batch_id'
+    ORDER BY p.id ASC
+  ";
+  
+  error_log("pricing_getBatchDetails - Batch ID: $batch_id, SQL: " . $sql);
+  
+  $result = $database->query($sql);
+  $data = [];
+  $batchInfo = [];
+  
+  if (!$result) {
+    error_log("pricing_getBatchDetails - Query failed: " . $database->conn->error);
+    $database->close();
+    return [
+      'batchInfo' => [],
+      'products' => []
+    ];
+  }
+  
+  while ($row = mysqli_fetch_assoc($result)) {
+    // Calculate margin
+    $margin = pricing_calculateMargin(
+      floatval($row['cost_price']),
+      floatval($row['current_selling_price'])
+    );
+    $row['margin_percent'] = $margin;
+    
+    $data[] = $row;
+    
+    // Store batch info from first record
+    if (empty($batchInfo)) {
+      $batchInfo = [
+        'batch_id' => $batch_id,
+        'batch_date' => $row['batch_date'],
+        'supplier_name' => $row['supplier_name']
+      ];
+    }
+  }
+  
+  error_log("pricing_getBatchDetails - Retrieved " . count($data) . " products");
+  
+  $database->close();
+  
+  return [
+    'batchInfo' => $batchInfo,
+    'products' => $data
+  ];
+}
+
+// Calculate margin percent from cost price and selling price
+function pricing_calculateMargin($costPrice, $sellingPrice)
+{
+  if ($costPrice <= 0) return 0;
+  
+  $margin = (($sellingPrice - $costPrice) / $costPrice) * 100;
+  return round($margin, 2);
 }

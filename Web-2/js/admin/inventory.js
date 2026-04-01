@@ -31,6 +31,8 @@ $(document).ready(async function () {
   setDefaultDate();
   setTimeout(() => {
     loadStock(); // Tải tồn kho hiện tại khi mở trang
+
+    updateLowStockAlert(); // Cập nhật cảnh báo sản phẩm sắp hết hàng
   }, 500);
 });
 
@@ -45,6 +47,113 @@ function setDefaultDate() {
 
 function initializeEventListeners() {
   console.log("Initializing event listeners...");
+  
+  // Toggle Settings Section
+  $("#btnToggleSettings").click(function () {
+    const $section = $("#globalSettingsSection");
+    const $button = $(this);
+    const $icon = $button.find("i");
+    const $text = $button.find("span");
+    
+    if ($section.is(":hidden")) {
+      $section.slideDown(300);
+      $icon.removeClass("fa-chevron-down").addClass("fa-chevron-up");
+      $text.text("Ẩn cài đặt");
+    } else {
+      $section.slideUp(300);
+      $icon.removeClass("fa-chevron-up").addClass("fa-chevron-down");
+      $text.text("Cài đặt mức cảnh báo");
+    }
+  });
+  
+  // Alert Qty Modal - Save
+  $("#btnSaveAlertQty").click(function () {
+    const alertQty = $("#newAlertQty").val();
+    if (!alertQty || alertQty < 0) {
+      alert("Vui lòng nhập mức cảnh báo hợp lệ!");
+      return;
+    }
+    
+    $.ajax({
+      url: "../controller/admin/inventory.controller.php",
+      type: "POST",
+      dataType: "json",
+      data: {
+        function: "updateAlertQty",
+        product_id: currentProductId,
+        alert_qty: alertQty
+      }
+    }).done(function (result) {
+      if (result.success) {
+        alert("Cập nhật mức cảnh báo thành công!");
+        $("#alertQtyModal").removeClass("active");
+        loadStock(currentDate, currentPage);        updateLowStockAlert();      } else {
+        alert("Cập nhật thất bại!");
+      }
+    }).fail(function () {
+      alert("Lỗi khi cập nhật!");
+    });
+  });
+  
+  // Alert Qty Modal - Cancel
+  $("#btnCancelAlertQty").click(function () {
+    $("#alertQtyModal").removeClass("active");
+  });
+  
+  // Low Stock Edit Button
+  $(document).on("click", ".btn-edit-alert", function () {
+    currentProductId = $(this).data("product-id");
+    const productName = $(this).data("product-name");
+    const currentQty = $(this).data("current-qty");
+    const alertQty = $(this).data("alert-qty");
+    
+    $("#modalProductName").text(productName);
+    $("#modalCurrentQty").text(currentQty);
+    $("#newAlertQty").val(alertQty);
+    $("#alertQtyModal").addClass("active");
+    setTimeout(() => $("#newAlertQty").focus(), 100);
+  });
+
+  // Bulk Alert Qty - Apply to all products
+  $("#btnSetBulkAlertQty").click(function () {
+    const alertQty = $("#globalAlertQty").val();
+    if (!alertQty || alertQty < 0) {
+      alert("Vui lòng nhập mức cảnh báo hợp lệ!");
+      return;
+    }
+
+    const confirmed = confirm(`Bạn chắc chắn muốn đặt mức cảnh báo ${alertQty} cho TẤT CẢ sản phẩm?`);
+    if (!confirmed) return;
+
+    $(this).prop("disabled", true).text("Đang xử lý...");
+
+    $.ajax({
+      url: "../controller/admin/inventory.controller.php",
+      type: "POST",
+      dataType: "json",
+      data: {
+        function: "setBulkAlertQty",
+        alert_qty: alertQty
+      }
+    }).done(function (result) {
+      console.log("BulkAlertQty Response:", result);
+      if (result && result.success) {
+        alert("Cập nhật mức cảnh báo cho tất cả sản phẩm thành công!");
+        loadStock(currentDate, currentPage);
+        updateLowStockAlert();
+        $("#globalAlertQty").val("");
+      } else {
+        const errorMsg = result && result.message ? result.message : "Cập nhật thất bại!";
+        alert(errorMsg);
+      }
+    }).fail(function (jqXHR, textStatus, errorThrown) {
+      console.error("BulkAlertQty Error:", textStatus, errorThrown);
+      console.error("Response Text:", jqXHR.responseText);
+      alert("Lỗi khi cập nhật! " + errorThrown);
+    }).always(function () {
+      $("#btnSetBulkAlertQty").prop("disabled", false).text("Áp dụng cho tất cả sản phẩm");
+    });
+  });
   
   // Search button
   $("#searchStock").click(function () {
@@ -62,12 +171,18 @@ function initializeEventListeners() {
     console.log("Reset Stock button clicked");
     setDefaultDate();
     $("#searchProduct").val("");
+    $("#statusFilter").val("");
     currentPage = 1;
     loadStock();
   });
 
   // Real-time search
   $("#searchProduct").on("input", function () {
+    filterProducts();
+  });
+
+  // Status filter
+  $("#statusFilter").on("change", function () {
     filterProducts();
   });
 
@@ -176,14 +291,17 @@ function displayTable(response, date) {
   }
 
   if (data.length === 0) {
-    tbody.append("<tr><td colspan='7' class='text-center'>Không có sản phẩm</td></tr>");
+    tbody.append("<tr><td colspan='8' class='text-center'>Không có sản phẩm</td></tr>");
     updatePaginationUI(0, 0, total, page, totalPages);
     return;
   }
 
   data.forEach(function (row) {
     const stock = parseInt(row.stock_at_date) || 0;
+    const alertQty = parseInt(row.alert_qty) || 0;
     const stockClass = stock > 0 ? "text-success" : (stock < 0 ? "text-danger" : "text-warning");
+    const statusText = stock >= alertQty ? "⬤ Còn hàng" : "⬤ Hết hàng";
+    const statusClass = stock >= alertQty ? "status-in-stock" : "status-out-stock";
 
     const html = `
       <tr>
@@ -193,6 +311,7 @@ function displayTable(response, date) {
         <td>${row.total_input || 0}</td>
         <td>${row.total_output || 0}</td>
         <td class="${stockClass}" style="font-weight: bold;">${stock}</td>
+        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
         <td><button class="btn-action" onclick="viewDetail(${row.id}, '${row.name}', '${date}')">Chi tiết</button></td>
       </tr>
     `;
@@ -207,55 +326,58 @@ function displayTable(response, date) {
 
 function filterProducts() {
   const searchTerm = $("#searchProduct").val().toLowerCase();
-  console.log("Filtering products with search term:", searchTerm);
+  const statusFilter = $("#statusFilter").val();
+  
+  console.log("Filtering products with search term:", searchTerm, "status:", statusFilter);
   
   const tbody = $("#stockTableBody");
   tbody.empty();
   
   if (allData.length === 0) {
-    tbody.append("<tr><td colspan='7' class='text-center'>Không có sản phẩm</td></tr>");
+    tbody.append("<tr><td colspan='8' class='text-center'>Không có sản phẩm</td></tr>");
     return;
   }
   
-  if (!searchTerm) {
-    // Show all data from current page
-    allData.forEach(function (row) {
-      const stock = parseInt(row.stock_at_date) || 0;
-      const stockClass = stock > 0 ? "text-success" : (stock < 0 ? "text-danger" : "text-warning");
-
-      const html = `
-        <tr>
-          <td>${row.id}</td>
-          <td>${row.name}</td>
-          <td>${row.supplier_name}</td>
-          <td>${row.total_input || 0}</td>
-          <td>${row.total_output || 0}</td>
-          <td class="${stockClass}" style="font-weight: bold;">${stock}</td>
-          <td><button class="btn-action" onclick="viewDetail(${row.id}, '${row.name}', '${currentDate}')">Chi tiết</button></td>
-        </tr>
-      `;
-      tbody.append(html);
+  // Filter data based on search term and status
+  let filtered = allData;
+  
+  // Filter by search term
+  if (searchTerm) {
+    filtered = filtered.filter(product => {
+      const idMatch = product.id.toString().includes(searchTerm);
+      const nameMatch = product.name.toLowerCase().includes(searchTerm);
+      const supplierMatch = product.supplier_name.toLowerCase().includes(searchTerm);
+      return idMatch || nameMatch || supplierMatch;
     });
-    return;
   }
   
-  // Filter data
-  const filtered = allData.filter(product => {
-    const idMatch = product.id.toString().includes(searchTerm);
-    const nameMatch = product.name.toLowerCase().includes(searchTerm);
-    const supplierMatch = product.supplier_name.toLowerCase().includes(searchTerm);
-    
-    return idMatch || nameMatch || supplierMatch;
-  });
+  // Filter by status
+  if (statusFilter) {
+    filtered = filtered.filter(product => {
+      const stock = parseInt(product.stock_at_date) || 0;
+      const alertQty = parseInt(product.alert_qty) || 0;
+      const isInStock = stock >= alertQty;
+      
+      if (statusFilter === "instock") {
+        return isInStock;
+      } else if (statusFilter === "outstock") {
+        return !isInStock;
+      }
+      return true;
+    });
+  }
   
   if (filtered.length === 0) {
-    tbody.append("<tr><td colspan='7' class='text-center'>Không có sản phẩm phù hợp</td></tr>");
+    tbody.append("<tr><td colspan='8' class='text-center'>Không có sản phẩm phù hợp</td></tr>");
     return;
   }
   
   filtered.forEach(function (row) {
     const stock = parseInt(row.stock_at_date) || 0;
+    const alertQty = parseInt(row.alert_qty) || 0;
     const stockClass = stock > 0 ? "text-success" : (stock < 0 ? "text-danger" : "text-warning");
+    const statusText = stock >= alertQty ? "⬤ Còn hàng" : "⬭ Hết hàng";
+    const statusClass = stock >= alertQty ? "status-in-stock" : "status-out-stock";
 
     const html = `
       <tr>
@@ -265,6 +387,7 @@ function filterProducts() {
         <td>${row.total_input || 0}</td>
         <td>${row.total_output || 0}</td>
         <td class="${stockClass}" style="font-weight: bold;">${stock}</td>
+        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
         <td><button class="btn-action" onclick="viewDetail(${row.id}, '${row.name}', '${currentDate}')">Chi tiết</button></td>
       </tr>
     `;
@@ -390,4 +513,31 @@ function isToday(dateStr) {
 function formatPrice(price) {
   if (!price) return "0 đ";
   return parseInt(price).toLocaleString("vi-VN") + " đ";
+}
+
+function updateLowStockAlert() {
+  $.ajax({
+    url: "../controller/admin/inventory.controller.php",
+    type: "POST",
+    dataType: "json",
+    data: {
+      function: "getLowStockCount"
+    }
+  }).done(function (result) {
+    const count = result.count || 0;
+    const $alert = $("#lowStockAlert");
+    const $countSpan = $("#lowStockCount");
+    
+    $countSpan.text(count);
+    
+    if (count > 0) {
+      $alert.show();
+    } else {
+      $alert.hide();
+    }
+    
+    console.log("Low stock alert updated, count:", count);
+  }).fail(function () {
+    console.error("Failed to load low stock count");
+  });
 }

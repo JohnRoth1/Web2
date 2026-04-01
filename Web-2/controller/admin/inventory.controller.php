@@ -23,6 +23,21 @@ if (isset($_POST['function'])) {
     case 'getProductTransactionsAtDate':
       getProductTransactionsAtDate();
       break;
+    case 'getLowStockProducts':
+      getLowStockProducts();
+      break;
+    case 'getLowStockCount':
+      getLowStockCount();
+      break;
+    case 'updateAlertQty':
+      updateAlertQty();
+      break;
+    case 'setBulkAlertQty':
+      setBulkAlertQty();
+      break;
+    case 'getDefaultAlertQty':
+      getDefaultAlertQty();
+      break;
   }
 }
 
@@ -107,10 +122,60 @@ function getStockAtDate()
   echo json_encode($result);
 }
 
+function getLowStockProducts()
+{
+  $products = inventory_getLowStockProducts();
+  header('Content-Type: application/json');
+  echo json_encode($products);
+}
+
+function getLowStockCount()
+{
+  $count = inventory_getLowStockCount();
+  header('Content-Type: application/json');
+  echo json_encode(['count' => $count]);
+}
+
+function updateAlertQty()
+{
+  if (isset($_POST['product_id']) && isset($_POST['alert_qty'])) {
+    $result = inventory_updateAlertQty($_POST['product_id'], $_POST['alert_qty']);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => $result]);
+  } else {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Missing parameters']);
+  }
+}
+
 function getProductTransactionsAtDate()
 {
   $product_id = isset($_POST['product_id']) ? $_POST['product_id'] : 0;
   $date = isset($_POST['date']) ? $_POST['date'] : date('Y-m-d');
   $data = inventory_getProductTransactionsAtDate($product_id, $date);
   echo json_encode($data);
+}
+
+function setBulkAlertQty()
+{
+  if (isset($_POST['alert_qty'])) {
+    $alert_qty = $_POST['alert_qty'];
+    error_log("setBulkAlertQty - Received alert_qty: $alert_qty");
+    
+    $result = inventory_setBulkAlertQty($alert_qty);
+    header('Content-Type: application/json');
+    error_log("setBulkAlertQty - Result: " . ($result ? "true" : "false"));
+    echo json_encode(['success' => (bool)$result]);
+  } else {
+    header('Content-Type: application/json');
+    error_log("setBulkAlertQty - Missing alert_qty parameter");
+    echo json_encode(['success' => false, 'message' => 'Missing alert_qty parameter']);
+  }
+}
+
+function getDefaultAlertQty()
+{
+  $default = inventory_getDefaultAlertQty();
+  header('Content-Type: application/json');
+  echo json_encode(['default_alert_qty' => $default]);
 }
