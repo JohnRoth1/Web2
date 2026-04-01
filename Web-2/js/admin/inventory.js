@@ -3,6 +3,7 @@ var script = document.createElement("SCRIPT");
 script.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js";
 script.type = "text/javascript";
 document.getElementsByTagName("head")[0].appendChild(script);
+console.log("jQuery script loading...");
 
 let currentProductId = null;
 let currentDate = null;
@@ -11,8 +12,10 @@ let currentDate = null;
 function checkJQueryReady() {
   return new Promise(async function (resolve) {
     while (!window.jQuery) {
+      console.log("Waiting for jQuery...");
       await new Promise(resolve => setTimeout(resolve, 20));
     }
+    console.log("jQuery ready!");
     resolve();
   });
 }
@@ -22,7 +25,9 @@ $(document).ready(async function () {
   await checkJQueryReady();
   initializeEventListeners();
   setDefaultDate();
-  loadStock(); // Tải tồn kho hiện tại khi mở trang
+  setTimeout(() => {
+    loadStock(); // Tải tồn kho hiện tại khi mở trang
+  }, 500);
 });
 
 function setDefaultDate() {
@@ -35,8 +40,11 @@ function setDefaultDate() {
 }
 
 function initializeEventListeners() {
+  console.log("Initializing event listeners...");
+  
   // Search button
   $("#searchStock").click(function () {
+    console.log("Search Stock button clicked");
     const selectedDate = $("#stockDate").val();
     if (selectedDate) {
       currentDate = selectedDate;
@@ -46,6 +54,7 @@ function initializeEventListeners() {
 
   // Reset button - back to today
   $("#resetStock").click(function () {
+    console.log("Reset Stock button clicked");
     setDefaultDate();
     loadStock();
   });
@@ -71,10 +80,14 @@ function initializeEventListeners() {
       $("#searchStock").click();
     }
   });
+  
+  console.log("Event listeners initialized");
 }
 
 function loadStock(date = null) {
   const searchDate = date || currentDate || new Date().toISOString().split('T')[0];
+  
+  console.log("Loading stock for date:", searchDate);
   
   $.ajax({
     url: "../controller/admin/inventory.controller.php",
@@ -85,13 +98,22 @@ function loadStock(date = null) {
       date: searchDate,
     },
   }).done(function (result) {
+    console.log("Stock data loaded:", result);
     displayTable(result, searchDate);
-  }).fail(function () {
-    alert("Lỗi tải dữ liệu tồn kho!");
+  }).fail(function (jqXHR, textStatus, errorThrown) {
+    console.error("AJAX Error:", {
+      status: jqXHR.status,
+      statusText: jqXHR.statusText,
+      responseText: jqXHR.responseText,
+      textStatus: textStatus,
+      errorThrown: errorThrown
+    });
+    alert("Lỗi tải dữ liệu tồn kho!\n\nStatus: " + jqXHR.status + "\nMessage: " + jqXHR.statusText);
   });
 }
 
 function displayTable(data, date) {
+  console.log("Displaying table with data:", data);
   const tbody = $("#stockTableBody");
   tbody.empty();
 
