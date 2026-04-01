@@ -186,23 +186,23 @@ function renderSiderBars(data) {
       icon: "fa-industry",
       fncid: 8,
     },
-    // {
-    //   // page: "receipt",
-    //   // name: "Nhập hàng",
-    //   // icon: "fa-file-invoice",
-    //   // fncid: 9,
-    // },
-    // {
-    //   // page: "role",
-    //   // name: "Phân quyền",
-    //   // icon: "fa-gavel",
-    //   // fncid: 10,
-    // },
+    {
+      page: "receipt",
+      name: "Phiếu nhập hàng",
+      icon: "fa-file-invoice",
+      fncid: 9,
+    },
+    {
+      page: "inventory",
+      name: "Quản lý tồn kho",
+      icon: "fa-boxes-stacked",
+      fncid: 11,
+    },
     {
       page: "discount",
       name: "Khuyến mãi",
-      icon: "fa-file-invoice",
-      fncid: 9,
+      icon: "fa-tag",
+      fncid: 10,
     },
   ];
 
