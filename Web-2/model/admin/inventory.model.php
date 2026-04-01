@@ -214,6 +214,7 @@ function inventory_getStockAtDate($date = '')
   }
   
   $date = mysqli_real_escape_string($database->link, $date);
+  error_log("inventory_getStockAtDate: Processing date: " . $date);
   
   $sql = "
     SELECT 
@@ -234,13 +235,18 @@ function inventory_getStockAtDate($date = '')
     ORDER BY p.name
   ";
   
+  error_log("inventory_getStockAtDate: Executing query");
   $result = $database->query($sql);
   $data = [];
   
   if ($result) {
+    error_log("inventory_getStockAtDate: Query successful");
     while ($row = mysqli_fetch_assoc($result)) {
       $data[] = $row;
     }
+    error_log("inventory_getStockAtDate: Retrieved " . count($data) . " rows");
+  } else {
+    error_log("inventory_getStockAtDate: Query failed - " . $database->link->error);
   }
   
   $database->close();

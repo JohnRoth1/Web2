@@ -86,7 +86,9 @@ function getProductHistory()
 function getStockAtDate()
 {
   $date = isset($_POST['date']) ? $_POST['date'] : date('Y-m-d');
+  error_log("getStockAtDate called with date: " . $date);
   $data = inventory_getStockAtDate($date);
+  error_log("getStockAtDate returning: " . json_encode($data));
   echo json_encode($data);
 }
 

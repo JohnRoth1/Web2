@@ -101,14 +101,15 @@ function loadStock(date = null) {
     console.log("Stock data loaded:", result);
     displayTable(result, searchDate);
   }).fail(function (jqXHR, textStatus, errorThrown) {
-    console.error("AJAX Error:", {
+    console.error("AJAX Error Details:", {
       status: jqXHR.status,
       statusText: jqXHR.statusText,
       responseText: jqXHR.responseText,
       textStatus: textStatus,
-      errorThrown: errorThrown
+      errorThrown: errorThrown,
+      contentType: jqXHR.getResponseHeader("content-type")
     });
-    alert("Lỗi tải dữ liệu tồn kho!\n\nStatus: " + jqXHR.status + "\nMessage: " + jqXHR.statusText);
+    alert("Lỗi tải dữ liệu tồn kho!\n\nStatus: " + jqXHR.status + "\nResponse: " + jqXHR.responseText);
   });
 }
 
