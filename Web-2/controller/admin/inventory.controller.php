@@ -86,10 +86,25 @@ function getProductHistory()
 function getStockAtDate()
 {
   $date = isset($_POST['date']) ? $_POST['date'] : date('Y-m-d');
-  error_log("getStockAtDate called with date: " . $date);
-  $data = inventory_getStockAtDate($date);
-  error_log("getStockAtDate returning: " . json_encode($data));
-  echo json_encode($data);
+  $page = isset($_POST['page']) ? intval($_POST['page']) : 1;
+  $perPage = 8;
+  
+  error_log("getStockAtDate called with date: " . $date . ", page: " . $page);
+  
+  $data = inventory_getStockAtDate($date, $page, $perPage);
+  $total = inventory_getTotalProducts($date);
+  $totalPages = ceil($total / $perPage);
+  
+  $result = [
+    'data' => $data,
+    'total' => $total,
+    'page' => $page,
+    'perPage' => $perPage,
+    'totalPages' => $totalPages
+  ];
+  
+  error_log("getStockAtDate returning: " . json_encode($result));
+  echo json_encode($result);
 }
 
 function getProductTransactionsAtDate()

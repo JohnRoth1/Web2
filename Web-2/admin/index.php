@@ -97,6 +97,9 @@ if (!isset($_SESSION['usernameAdmin'])) {
             case 'inventory':
               require_once('public/inventory.php');
               break;
+            case 'pricing':
+              require_once('public/pricing.php');
+              break;
           // case 'account':
           // require_once('public/account.php');
           // break;

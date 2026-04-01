@@ -7,6 +7,10 @@ console.log("jQuery script loading...");
 
 let currentProductId = null;
 let currentDate = null;
+let currentPage = 1;
+let totalPages = 1;
+let allData = [];
+let filteredData = [];
 
 // Wait for jQuery to load
 function checkJQueryReady() {
@@ -48,7 +52,8 @@ function initializeEventListeners() {
     const selectedDate = $("#stockDate").val();
     if (selectedDate) {
       currentDate = selectedDate;
-      loadStock(selectedDate);
+      currentPage = 1;
+      loadStock(selectedDate, 1);
     }
   });
 
@@ -56,7 +61,38 @@ function initializeEventListeners() {
   $("#resetStock").click(function () {
     console.log("Reset Stock button clicked");
     setDefaultDate();
+    $("#searchProduct").val("");
+    currentPage = 1;
     loadStock();
+  });
+
+  // Real-time search
+  $("#searchProduct").on("input", function () {
+    filterProducts();
+  });
+
+  // Pagination buttons
+  $("#prevPage").click(function () {
+    if (currentPage > 1) {
+      currentPage--;
+      loadStock(currentDate, currentPage);
+    }
+  });
+
+  $("#nextPage").click(function () {
+    if (currentPage < totalPages) {
+      currentPage++;
+      loadStock(currentDate, currentPage);
+    }
+  });
+
+  // Pagination number click
+  $(document).on("click", ".pagination-number", function () {
+    const page = parseInt($(this).data("page"));
+    if (page !== currentPage) {
+      currentPage = page;
+      loadStock(currentDate, currentPage);
+    }
   });
 
   // Modal close button
@@ -84,10 +120,11 @@ function initializeEventListeners() {
   console.log("Event listeners initialized");
 }
 
-function loadStock(date = null) {
+function loadStock(date = null, page = 1) {
   const searchDate = date || currentDate || new Date().toISOString().split('T')[0];
+  currentPage = page;
   
-  console.log("Loading stock for date:", searchDate);
+  console.log("Loading stock for date:", searchDate, "page:", page);
   
   $.ajax({
     url: "../controller/admin/inventory.controller.php",
@@ -96,6 +133,7 @@ function loadStock(date = null) {
     data: {
       function: "getStockAtDate",
       date: searchDate,
+      page: page
     },
   }).done(function (result) {
     console.log("Stock data loaded:", result);
@@ -113,8 +151,19 @@ function loadStock(date = null) {
   });
 }
 
-function displayTable(data, date) {
-  console.log("Displaying table with data:", data);
+function displayTable(response, date) {
+  console.log("Displaying table with data:", response);
+  
+  // Extract data from pagination response
+  const data = response.data || [];
+  const total = response.total || 0;
+  const page = response.page || 1;
+  const perPage = response.perPage || 8;
+  totalPages = response.totalPages || 1;
+  
+  allData = data;
+  filteredData = data;
+  
   const tbody = $("#stockTableBody");
   tbody.empty();
 
@@ -128,6 +177,7 @@ function displayTable(data, date) {
 
   if (data.length === 0) {
     tbody.append("<tr><td colspan='7' class='text-center'>Không có sản phẩm</td></tr>");
+    updatePaginationUI(0, 0, total, page, totalPages);
     return;
   }
 
@@ -148,6 +198,120 @@ function displayTable(data, date) {
     `;
     tbody.append(html);
   });
+  
+  // Update pagination info and controls
+  const startRecord = (page - 1) * perPage + 1;
+  const endRecord = Math.min(page * perPage, total);
+  updatePaginationUI(startRecord, endRecord, total, page, totalPages);
+}
+
+function filterProducts() {
+  const searchTerm = $("#searchProduct").val().toLowerCase();
+  console.log("Filtering products with search term:", searchTerm);
+  
+  const tbody = $("#stockTableBody");
+  tbody.empty();
+  
+  if (allData.length === 0) {
+    tbody.append("<tr><td colspan='7' class='text-center'>Không có sản phẩm</td></tr>");
+    return;
+  }
+  
+  if (!searchTerm) {
+    // Show all data from current page
+    allData.forEach(function (row) {
+      const stock = parseInt(row.stock_at_date) || 0;
+      const stockClass = stock > 0 ? "text-success" : (stock < 0 ? "text-danger" : "text-warning");
+
+      const html = `
+        <tr>
+          <td>${row.id}</td>
+          <td>${row.name}</td>
+          <td>${row.supplier_name}</td>
+          <td>${row.total_input || 0}</td>
+          <td>${row.total_output || 0}</td>
+          <td class="${stockClass}" style="font-weight: bold;">${stock}</td>
+          <td><button class="btn-action" onclick="viewDetail(${row.id}, '${row.name}', '${currentDate}')">Chi tiết</button></td>
+        </tr>
+      `;
+      tbody.append(html);
+    });
+    return;
+  }
+  
+  // Filter data
+  const filtered = allData.filter(product => {
+    const idMatch = product.id.toString().includes(searchTerm);
+    const nameMatch = product.name.toLowerCase().includes(searchTerm);
+    const supplierMatch = product.supplier_name.toLowerCase().includes(searchTerm);
+    
+    return idMatch || nameMatch || supplierMatch;
+  });
+  
+  if (filtered.length === 0) {
+    tbody.append("<tr><td colspan='7' class='text-center'>Không có sản phẩm phù hợp</td></tr>");
+    return;
+  }
+  
+  filtered.forEach(function (row) {
+    const stock = parseInt(row.stock_at_date) || 0;
+    const stockClass = stock > 0 ? "text-success" : (stock < 0 ? "text-danger" : "text-warning");
+
+    const html = `
+      <tr>
+        <td>${row.id}</td>
+        <td>${row.name}</td>
+        <td>${row.supplier_name}</td>
+        <td>${row.total_input || 0}</td>
+        <td>${row.total_output || 0}</td>
+        <td class="${stockClass}" style="font-weight: bold;">${stock}</td>
+        <td><button class="btn-action" onclick="viewDetail(${row.id}, '${row.name}', '${currentDate}')">Chi tiết</button></td>
+      </tr>
+    `;
+    tbody.append(html);
+  });
+}
+
+function updatePaginationUI(startRecord, endRecord, totalRecords, currentPageNum, totalPagesNum) {
+  // Update pagination info
+  $("#startRecord").text(totalRecords > 0 ? startRecord : 0);
+  $("#endRecord").text(endRecord);
+  $("#totalRecords").text(totalRecords);
+  
+  // Update prev/next buttons
+  $("#prevPage").prop("disabled", currentPageNum <= 1);
+  $("#nextPage").prop("disabled", currentPageNum >= totalPagesNum);
+  
+  // Update page numbers
+  const pageNumbers = $("#paginationNumbers");
+  pageNumbers.empty();
+  
+  const maxPageButtons = 5;
+  let startPage = Math.max(1, currentPageNum - Math.floor(maxPageButtons / 2));
+  let endPage = Math.min(totalPagesNum, startPage + maxPageButtons - 1);
+  
+  if (endPage - startPage < maxPageButtons - 1) {
+    startPage = Math.max(1, endPage - maxPageButtons + 1);
+  }
+  
+  if (startPage > 1) {
+    pageNumbers.append(`<button class="pagination-number" data-page="1">1</button>`);
+    if (startPage > 2) {
+      pageNumbers.append(`<span class="pagination-dots">...</span>`);
+    }
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
+    const activeClass = i === currentPageNum ? "active" : "";
+    pageNumbers.append(`<button class="pagination-number ${activeClass}" data-page="${i}">${i}</button>`);
+  }
+  
+  if (endPage < totalPagesNum) {
+    if (endPage < totalPagesNum - 1) {
+      pageNumbers.append(`<span class="pagination-dots">...</span>`);
+    }
+    pageNumbers.append(`<button class="pagination-number" data-page="${totalPagesNum}">${totalPagesNum}</button>`);
+  }
 }
 
 function viewDetail(productId, productName, date) {

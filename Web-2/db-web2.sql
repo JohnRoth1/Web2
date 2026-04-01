@@ -390,7 +390,8 @@ INSERT INTO `functions` (`id`, `name`, `status`, `delete_date`, `update_date`) V
 (8, 'Quản lý nhà cung cấp', 1, NULL, NULL),
 (9, 'Quản lý nhập hàng', 1, NULL, NULL),
 (10, 'Quản lý phân quyền', 1, NULL, NULL),
-(11, 'Quản lý khuyển mãi', 1, NULL, NULL);
+(11, 'Quản lý khuyển mãi', 1, NULL, NULL),
+(12, 'Quản lý giá bán', 1, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -430,7 +431,9 @@ INSERT INTO `function_details` (`function_id`, `role_id`, `action`) VALUES
 (9, 2, 1),
 (10, 2, 0),
 (11, 1, 1),
-(11, 2, 1);
+(11, 2, 1),
+(12, 1, 1),
+(12, 2, 1);
 
 -- --------------------------------------------------------
 

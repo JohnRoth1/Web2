@@ -441,11 +441,6 @@ var js = function () {
                             <span class="error-message name hidden"></span>
                         </div>
                         <div class="flex">
-                            <label for="price">Giá sản phẩm</label>
-                            <input id="price" class = "priceClass" type="text" add-index="3" placeholder="Giá sản phẩm" >
-                            <span class="error-message price hidden"></span>
-                        </div>
-                        <div class="flex">
                             <label for="publisher_id">Nhà xuất bản</label>
                             <select id="publisher_id">
                             </select>

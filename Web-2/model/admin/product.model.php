@@ -226,7 +226,7 @@ function product_edit($field)
   }
   $sql = "UPDATE products
           SET name= '" . $field['name'] . "', publisher_id= '" . $field['publisher_id'] . "', image_path= '" . $image_path .
-          "', update_date= '" . $date  . "', price= '" . $field['price'] . "', supplier_id= '" . $field['supplier_id']. "', status= '" . $field['status']. "' WHERE id=" . $field['id'];
+          "', update_date= '" . $date  . "', supplier_id= '" . $field['supplier_id']. "', status= '" . $field['status']. "' WHERE id=" . $field['id'];
 
   $result = $database->execute($sql);
 

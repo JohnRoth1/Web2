@@ -13,28 +13,28 @@ function inventory_getHistory($filters = [])
   
   // Lọc theo ngày bắt đầu
   if (!empty($filters['date_start'])) {
-    $dateStart = mysqli_real_escape_string($database->link, $filters['date_start']);
+    $dateStart = mysqli_real_escape_string($database->conn, $filters['date_start']);
     $whereNhap .= " AND gr.date_create >= '$dateStart'";
     $whereXuat .= " AND o.date_create >= '$dateStart'";
   }
   
   // Lọc theo ngày kết thúc
   if (!empty($filters['date_end'])) {
-    $dateEnd = mysqli_real_escape_string($database->link, $filters['date_end']);
+    $dateEnd = mysqli_real_escape_string($database->conn, $filters['date_end']);
     $whereNhap .= " AND gr.date_create <= '$dateEnd'";
     $whereXuat .= " AND o.date_create <= '$dateEnd'";
   }
   
   // Lọc theo mã sản phẩm
   if (!empty($filters['product_id'])) {
-    $productId = mysqli_real_escape_string($database->link, $filters['product_id']);
+    $productId = mysqli_real_escape_string($database->conn, $filters['product_id']);
     $whereNhap .= " AND gd.product_id = '$productId'";
     $whereXuat .= " AND od.product_id = '$productId'";
   }
   
   // Lọc theo tên sản phẩm
   if (!empty($filters['product_name'])) {
-    $productName = mysqli_real_escape_string($database->link, $filters['product_name']);
+    $productName = mysqli_real_escape_string($database->conn, $filters['product_name']);
     $whereNhap .= " AND p.name LIKE '%$productName%'";
     $whereXuat .= " AND p.name LIKE '%$productName%'";
   }
@@ -203,8 +203,33 @@ function inventory_getProductHistory($product_id, $filters = [])
   return $data;
 }
 
-// Lấy tồn kho của tất cả sản phẩm tại 1 thời điểm cụ thể
-function inventory_getStockAtDate($date = '')
+// Lấy tổng số sản phẩm
+function inventory_getTotalProducts($date = '')
+{
+  $database = new connectDB();
+  
+  if (empty($date)) {
+    $date = date('Y-m-d');
+  }
+  
+  $date = mysqli_real_escape_string($database->conn, $date);
+  
+  $sql = "SELECT COUNT(DISTINCT p.id) as total FROM products p WHERE p.status = 1";
+  
+  $result = $database->query($sql);
+  $total = 0;
+  
+  if ($result) {
+    $row = mysqli_fetch_assoc($result);
+    $total = $row['total'] ?? 0;
+  }
+  
+  $database->close();
+  return $total;
+}
+
+// Lấy tồn kho của tất cả sản phẩm tại 1 thời điểm cụ thể (có phân trang)
+function inventory_getStockAtDate($date = '', $page = 1, $perPage = 8)
 {
   $database = new connectDB();
   
@@ -213,8 +238,12 @@ function inventory_getStockAtDate($date = '')
     $date = date('Y-m-d');
   }
   
-  $date = mysqli_real_escape_string($database->link, $date);
-  error_log("inventory_getStockAtDate: Processing date: " . $date);
+  $date = mysqli_real_escape_string($database->conn, $date);
+  $page = max(1, intval($page));
+  $perPage = intval($perPage);
+  $offset = ($page - 1) * $perPage;
+  
+  error_log("inventory_getStockAtDate: Processing date: " . $date . ", page: " . $page . ", offset: " . $offset);
   
   $sql = "
     SELECT 
@@ -223,7 +252,7 @@ function inventory_getStockAtDate($date = '')
       s.name as supplier_name,
       COALESCE(SUM(CASE WHEN gr.date_create IS NOT NULL AND DATE(gr.date_create) <= '$date' THEN gd.quantity ELSE 0 END), 0) as total_input,
       COALESCE(SUM(CASE WHEN o.date_create IS NOT NULL AND DATE(o.date_create) <= '$date' AND o.status_id IN (5, 4) THEN od.quantity ELSE 0 END), 0) as total_output,
-      (COALESCE(SUM(CASE WHEN gr.date_create IS NOT NULL AND DATE(gr.date_create) <= '$date' THEN gd.quantity ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN o.date_create IS NOT NULL AND DATE(o.date_create) <= '$date' AND o.status_id IN (5, 4) THEN od.quantity ELSE 0 END), 0)) as stock_at_date
+      (p.quantity + COALESCE(SUM(CASE WHEN gr.date_create IS NOT NULL AND DATE(gr.date_create) <= '$date' THEN gd.quantity ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN o.date_create IS NOT NULL AND DATE(o.date_create) <= '$date' AND o.status_id IN (5, 4) THEN od.quantity ELSE 0 END), 0)) as stock_at_date
     FROM products p
     JOIN suppliers s ON p.supplier_id = s.id
     LEFT JOIN goodsreceipt_details gd ON gd.product_id = p.id
@@ -231,8 +260,9 @@ function inventory_getStockAtDate($date = '')
     LEFT JOIN order_details od ON od.product_id = p.id
     LEFT JOIN orders o ON od.order_id = o.id
     WHERE p.status = 1
-    GROUP BY p.id, p.name, s.name
-    ORDER BY p.name
+    GROUP BY p.id, p.name, p.quantity, s.name
+    ORDER BY p.id ASC
+    LIMIT $perPage OFFSET $offset
   ";
   
   error_log("inventory_getStockAtDate: Executing query");
@@ -246,7 +276,7 @@ function inventory_getStockAtDate($date = '')
     }
     error_log("inventory_getStockAtDate: Retrieved " . count($data) . " rows");
   } else {
-    error_log("inventory_getStockAtDate: Query failed - " . $database->link->error);
+    error_log("inventory_getStockAtDate: Query failed - " . $database->conn->error);
   }
   
   $database->close();
@@ -262,8 +292,8 @@ function inventory_getProductTransactionsAtDate($product_id, $date = '')
     $date = date('Y-m-d');
   }
   
-  $date = mysqli_real_escape_string($database->link, $date);
-  $product_id = mysqli_real_escape_string($database->link, $product_id);
+  $date = mysqli_real_escape_string($database->conn, $date);
+  $product_id = mysqli_real_escape_string($database->conn, $product_id);
   
   $sql = "
     SELECT 

@@ -199,6 +199,12 @@ function renderSiderBars(data) {
       fncid: 11,
     },
     {
+      page: "pricing",
+      name: "Quản lý giá bán",
+      icon: "fa-tag",
+      fncid: 12,
+    },
+    {
       page: "discount",
       name: "Khuyến mãi",
       icon: "fa-tag",

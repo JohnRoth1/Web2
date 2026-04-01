@@ -24,6 +24,10 @@ $_SESSION["render"]->setTable("products");
                     <label>Chọn ngày</label>
                     <input type="date" id="stockDate" />
                 </div>
+                <div class="filter-field" style="flex: 1; min-width: 250px;">
+                    <label>Tìm kiếm sản phẩm</label>
+                    <input type="text" id="searchProduct" placeholder="Nhập mã hoặc tên sản phẩm..." />
+                </div>
             </div>
             <div class="filter-actions">
                 <button class="btn-search" id="searchStock">
@@ -54,6 +58,20 @@ $_SESSION["render"]->setTable("products");
                         <tr><td colspan="7" class="text-center">Đang tải dữ liệu...</td></tr>
                     </tbody>
                 </table>
+            </div>
+            <div class="pagination-section">
+                <div class="pagination-info">
+                    <span>Hiển thị <span id="startRecord">0</span> - <span id="endRecord">0</span> trong <span id="totalRecords">0</span> sản phẩm</span>
+                </div>
+                <div class="pagination-controls">
+                    <button class="btn-pagination" id="prevPage" disabled>
+                        <i class="fas fa-chevron-left"></i> Trang trước
+                    </button>
+                    <div class="pagination-numbers" id="paginationNumbers"></div>
+                    <button class="btn-pagination" id="nextPage" disabled>
+                        Trang sau <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
