@@ -213,6 +213,21 @@ function initializeEventListeners() {
     viewBatchDetails(batchId);
   });
 
+  // Toggle profit settings section
+  $("#btnToggleProfitSettings").click(function () {
+    const section = $("#profitSettingsSection");
+    const icon = $(this).find("i");
+    const isVisible = section.is(":visible");
+
+    if (isVisible) {
+      section.slideUp(200);
+      icon.css("transform", "rotate(0deg)");
+    } else {
+      section.slideDown(200);
+      icon.css("transform", "rotate(180deg)");
+    }
+  });
+
   // Increase profit margin for all products
   $("#btnIncreaseProfitMargin").click(function () {
     const increase = parseFloat($("#profitMarginIncrease").val());

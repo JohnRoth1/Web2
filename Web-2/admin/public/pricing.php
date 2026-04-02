@@ -48,8 +48,15 @@ $_SESSION["render"]->setTable("products");
             </div>
         </div>
 
+        <!-- Toggle Button for Profit Settings -->
+        <div class="settings-toggle-section">
+            <button class="btn-toggle-settings" id="btnToggleProfitSettings">
+                <i class="fas fa-chevron-down"></i> <span>Tăng % cho tất cả sản phẩm</span>
+            </button>
+        </div>
+
         <!-- Profit Margin Adjustment Section -->
-        <div class="profit-margin-section">
+        <div class="profit-margin-section" id="profitSettingsSection" style="display: none;">
             <h3><i class="fas fa-percentage"></i> Tăng % Lợi Nhuận</h3>
             <div class="margin-form">
                 <div class="form-group-inline">
