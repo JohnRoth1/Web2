@@ -42,7 +42,11 @@ function render()
             );
             $orderby = $id[$render->getTable()];
         }
-        $render->setOrderby("ORDER BY " . $render->getTable() . "." . $orderby . $type);
+        if ($render->getTable() == 'orders' && $orderby == 'delivery_ward') {
+            $render->setOrderby("ORDER BY di.ward" . $type);
+        } else {
+            $render->setOrderby("ORDER BY " . $render->getTable() . "." . $orderby . $type);
+        }
         $render->setNumberOfItem($_POST['number_of_item']);
         $render->setCurrentPage($_POST['current_page']);
         echo $render->render();

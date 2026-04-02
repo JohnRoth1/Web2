@@ -7,14 +7,14 @@ function product_delete($id)
 {
   $database = new connectDB();
 
-  // Kiểm tra xem sản phẩm có trong bảng order_details hay không
-  $sql_check = "SELECT COUNT(*) as count FROM order_details WHERE product_id = '" . $id . "'";
+  // Rule nghiệp vụ: nếu sản phẩm đã từng nhập hàng thì chỉ ẩn (soft-hide), chưa từng nhập thì xóa cứng
+  $sql_check = "SELECT COUNT(*) as count FROM goodsreceipt_details WHERE product_id = '" . $id . "'";
   $result_check = $database->query($sql_check);
   $row_check = mysqli_fetch_array($result_check);
-  $is_sold = $row_check['count'] > 0;
+  $is_imported = $row_check['count'] > 0;
 
-  if ($is_sold) {
-    // Nếu sản phẩm đã được bán (tồn tại trong order_details), chỉ cập nhật trạng thái (soft delete)
+  if ($is_imported) {
+    // Nếu sản phẩm đã từng nhập hàng, chỉ cập nhật trạng thái (soft hide)
     $sql = 'UPDATE products SET status="0" WHERE id="' . $id . '"';
     $result = $database->query($sql);
 
@@ -22,7 +22,7 @@ function product_delete($id)
     if ($result) {
       return (object) array(
         'success' => true,
-        'message' => "<span class='success'>Đã chuyển trạng thái sản phẩm với mã $id thành Ngừng kinh doanh</span>"
+        'message' => "<span class='success'>Sản phẩm đã từng nhập hàng, hệ thống chuyển sang trạng thái Ẩn (ngừng kinh doanh)</span>"
       );
     } else {
       $error = "<span class='failed'>Không thể chuyển trạng thái sản phẩm với mã $id</span>";
@@ -32,7 +32,7 @@ function product_delete($id)
       );
     }
   } else {
-    // Nếu sản phẩm chưa được bán (không tồn tại trong order_details), xóa thật (hard delete)
+    // Nếu sản phẩm chưa từng nhập hàng, xóa thật (hard delete)
 
     // Xóa các bản ghi liên quan trong category_details
     $sql = 'DELETE FROM category_details WHERE product_id="' . $id . '"';

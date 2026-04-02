@@ -547,6 +547,10 @@ const openModal = addHtml => {
       <label for="date_create">Ngày lập</label>
       <input type="date" id="date_create">
     </div>
+    <div class="input-field">
+      <label for="receipt_status">Trạng thái phiếu</label>
+      <input type="text" id="receipt_status" readonly="">
+    </div>
   
     <div class="book-table">
     <table id=Table> </table>
@@ -574,6 +578,8 @@ const openModal = addHtml => {
       editModal.style.display = "block";
 
       let id = this.closest("tr").querySelector(".id").innerHTML;
+      const rowStatus = this.closest("tr").querySelector(".receipt_status")?.getAttribute("data-status") || "draft";
+      const isCompleted = rowStatus === "completed";
 
       document.getElementById("idForm").value = id;
       document.getElementById("supplierNameForm").value =
@@ -596,6 +602,10 @@ const openModal = addHtml => {
       }).done(function (res) {
         if (res && res.success && res.data && res.data.date_create) {
           document.getElementById("date_create").value = res.data.date_create;
+          const st = res.data.status || rowStatus;
+          document.getElementById("receipt_status").value = st === "completed" ? "Hoàn thành" : "Nháp";
+        } else {
+          document.getElementById("receipt_status").value = rowStatus === "completed" ? "Hoàn thành" : "Nháp";
         }
       });
 
@@ -614,20 +624,22 @@ const openModal = addHtml => {
         success: function (response) {
           Table.innerHTML = response;
 
-          // Cho phép chỉnh sửa trực tiếp số lượng và giá nhập
+          // Chỉ cho phép chỉnh sửa khi phiếu còn nháp
           const rows = Table.querySelectorAll("tbody tr");
-          rows.forEach(row => {
-            const cells = row.querySelectorAll("td");
-            if (cells.length >= 4) {
-              const qtyText = cells[2].textContent.trim().replace(/[^\d-]/g, "");
-              const priceText = cells[3].textContent.trim().replace(/[^\d-]/g, "");
-              const qty = parseInt(qtyText) || 0;
-              const price = parseInt(priceText) || 0;
+          if (!isCompleted) {
+            rows.forEach(row => {
+              const cells = row.querySelectorAll("td");
+              if (cells.length >= 4) {
+                const qtyText = cells[2].textContent.trim().replace(/[^\d-]/g, "");
+                const priceText = cells[3].textContent.trim().replace(/[^\d-]/g, "");
+                const qty = parseInt(qtyText) || 0;
+                const price = parseInt(priceText) || 0;
 
-              cells[2].innerHTML = `<input type="number" class="edit-qty" min="1" value="${qty}" style="width: 100%;">`;
-              cells[3].innerHTML = `<input type="number" class="edit-input-price" min="1" value="${price}" style="width: 100%;">`;
-            }
-          });
+                cells[2].innerHTML = `<input type="number" class="edit-qty" min="1" value="${qty}" style="width: 100%;">`;
+                cells[3].innerHTML = `<input type="number" class="edit-input-price" min="1" value="${price}" style="width: 100%;">`;
+              }
+            });
+          }
 
           // Tính tổng giá từ bảng chi tiết
           let totalPrice = 0;
@@ -635,8 +647,12 @@ const openModal = addHtml => {
           rows.forEach(row => {
             const cells = row.querySelectorAll("td");
             if (cells.length >= 4) {
-              const qty = parseInt(cells[2].querySelector(".edit-qty").value) || 0;
-              const price = parseInt(cells[3].querySelector(".edit-input-price").value) || 0;
+              const qty = isCompleted
+                ? (parseInt(cells[2].textContent.trim().replace(/[^\d-]/g, "")) || 0)
+                : (parseInt(cells[2].querySelector(".edit-qty").value) || 0);
+              const price = isCompleted
+                ? (parseInt(cells[3].textContent.trim().replace(/[^\d-]/g, "")) || 0)
+                : (parseInt(cells[3].querySelector(".edit-input-price").value) || 0);
               const lineTotal = qty * price;
               cells[cells.length - 1].textContent = lineTotal.toLocaleString("vi-VN") + "₫";
               totalPrice += lineTotal;
@@ -646,28 +662,38 @@ const openModal = addHtml => {
           document.getElementById("total_price").value = totalPrice.toLocaleString('vi-VN');
 
           // Re-calc tổng tiền khi thay đổi input
-          Table.querySelectorAll(".edit-qty, .edit-input-price").forEach(input => {
-            input.addEventListener("input", () => {
-              const allRows = Table.querySelectorAll("tbody tr");
-              let nextTotal = 0;
-              allRows.forEach(r => {
-                const c = r.querySelectorAll("td");
-                if (c.length >= 4) {
-                  const q = parseInt(c[2].querySelector(".edit-qty").value) || 0;
-                  const p = parseInt(c[3].querySelector(".edit-input-price").value) || 0;
-                  const t = q * p;
-                  c[c.length - 1].textContent = t.toLocaleString("vi-VN") + "₫";
-                  nextTotal += t;
-                }
+          if (!isCompleted) {
+            Table.querySelectorAll(".edit-qty, .edit-input-price").forEach(input => {
+              input.addEventListener("input", () => {
+                const allRows = Table.querySelectorAll("tbody tr");
+                let nextTotal = 0;
+                allRows.forEach(r => {
+                  const c = r.querySelectorAll("td");
+                  if (c.length >= 4) {
+                    const q = parseInt(c[2].querySelector(".edit-qty").value) || 0;
+                    const p = parseInt(c[3].querySelector(".edit-input-price").value) || 0;
+                    const t = q * p;
+                    c[c.length - 1].textContent = t.toLocaleString("vi-VN") + "₫";
+                    nextTotal += t;
+                  }
+                });
+                document.getElementById("total_price").value = nextTotal.toLocaleString("vi-VN");
               });
-              document.getElementById("total_price").value = nextTotal.toLocaleString("vi-VN");
             });
-          });
+          }
 
           // Lưu chỉnh sửa phiếu nhập
           const saveBtn = document.getElementById("saveReceiptBtn");
+          if (isCompleted && saveBtn) {
+            saveBtn.style.display = "none";
+            document.getElementById("date_create").setAttribute("disabled", "disabled");
+          }
           if (saveBtn) {
             saveBtn.onclick = function () {
+              if (isCompleted) {
+                alert("Phiếu nhập đã hoàn thành, không thể sửa.");
+                return;
+              }
               const tableRows = Table.querySelectorAll("tbody tr");
               const detailData = [];
               let isValid = true;
@@ -722,6 +748,39 @@ const openModal = addHtml => {
             };
           }
         },
+      });
+    });
+  });
+
+  // Đánh dấu hoàn thành phiếu nhập
+  var complete_btns = document.querySelectorAll(".actions--complete");
+  complete_btns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const row = this.closest("tr");
+      const id = row.querySelector(".id").innerHTML;
+      const status = row.querySelector(".receipt_status")?.getAttribute("data-status");
+      if (status === "completed") return;
+
+      if (!confirm("Xác nhận hoàn thành phiếu nhập? Sau khi hoàn thành sẽ không thể sửa.")) {
+        return;
+      }
+
+      $.ajax({
+        url: "../controller/admin/receipt.controller.php",
+        type: "post",
+        dataType: "html",
+        data: {
+          function: "complete",
+          field: { id: id }
+        }
+      }).done(function (resultText) {
+        $("#sqlresult").html(resultText);
+        setTimeout(() => {
+          $("#sqlresult").html("");
+        }, 3000);
+        loadItem();
+      }).fail(function () {
+        alert("Lỗi khi hoàn thành phiếu nhập.");
       });
     });
   });

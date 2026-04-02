@@ -5,6 +5,60 @@ $base_dir = realpath(dirname(__FILE__)  . $ds . '..') . $ds;
 include_once("{$base_dir}connect.php");
 $database = new connectDB();
 
+function receipt_ensureStatusColumn($database)
+{
+  $checkSql = "SHOW COLUMNS FROM goodsreceipts LIKE 'status'";
+  $checkResult = $database->query($checkSql);
+  if (!$checkResult || $checkResult->num_rows === 0) {
+    $database->execute("ALTER TABLE goodsreceipts ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'draft'");
+  }
+}
+
+function receipt_getAverageCostPrice($database, $productId)
+{
+  $pid = intval($productId);
+  $sql = "SELECT quantity, input_price
+          FROM goodsreceipt_details
+          WHERE product_id = '$pid'";
+  $result = $database->query($sql);
+
+  $totalQty = 0;
+  $totalCost = 0;
+  while ($row = $result->fetch_assoc()) {
+    $qty = intval($row['quantity']);
+    $price = floatval($row['input_price']);
+    $totalQty += $qty;
+    $totalCost += ($qty * $price);
+  }
+
+  if ($totalQty <= 0) return 0;
+  return $totalCost / $totalQty;
+}
+
+function receipt_recalculateSellingPrice($database, $productId)
+{
+  $pid = intval($productId);
+  $avgCost = receipt_getAverageCostPrice($database, $pid);
+  if ($avgCost <= 0) return true;
+
+  $sqlProduct = "SELECT COALESCE(profit_margin, 0) as profit_margin
+                 FROM products
+                 WHERE id = '$pid'
+                 LIMIT 1";
+  $resultProduct = $database->query($sqlProduct);
+  if (!$resultProduct || $resultProduct->num_rows === 0) return false;
+
+  $margin = floatval($resultProduct->fetch_assoc()['profit_margin']);
+  $newPrice = $avgCost * (1 + $margin / 100);
+
+  date_default_timezone_set('Asia/Ho_Chi_Minh');
+  $date = date('Y-m-d', time());
+  $sqlUpdate = "UPDATE products
+                SET price = '$newPrice', update_date = '$date'
+                WHERE id = '$pid'";
+  return $database->execute($sqlUpdate);
+}
+
 function getNewReceiptId($database)
 {
   $sql = "SELECT MAX(id) AS max_id FROM goodsreceipts";
@@ -19,6 +73,7 @@ function getNewReceiptId($database)
 function receipt_create($field)
 {
   $database = new connectDB();
+  receipt_ensureStatusColumn($database);
 
   date_default_timezone_set('Asia/Ho_Chi_Minh');
   $date = date('Y-m-d', time());
@@ -30,11 +85,12 @@ function receipt_create($field)
 
 
 
-  $sqlInsertReceipt = "INSERT INTO goodsreceipts (id, staff_id, total_price, date_create) 
-                         VALUES ('" . $receiptId . "', '" . $staffId . "', '" . $totalPrice . "', '" . $date . "')";
+  $sqlInsertReceipt = "INSERT INTO goodsreceipts (id, staff_id, total_price, date_create, status) 
+                         VALUES ('" . $receiptId . "', '" . $staffId . "', '" . $totalPrice . "', '" . $date . "', 'draft')";
   $resultReceipt = $database->query($sqlInsertReceipt);
 
   if ($resultReceipt) {
+    $touchedProductIds = [];
 
     foreach ($field['details'] as $detail) {
       $productId = $detail['productId'];
@@ -51,6 +107,11 @@ function receipt_create($field)
       if (!$resultDetail || !$resultUpdateQuantity) {
         return "<span class='failed'>Tạo đơn nhập hàng không thành công</span>";
       }
+      $touchedProductIds[] = intval($productId);
+    }
+
+    foreach (array_unique($touchedProductIds) as $pid) {
+      receipt_recalculateSellingPrice($database, $pid);
     }
     return "<span class='success'>Tạo đơn nhập hàng thành công</span>";
   } else {
@@ -207,6 +268,7 @@ function receipt_getProductNumber($field)
 function receipt_getById($field)
 {
   $database = new connectDB();
+  receipt_ensureStatusColumn($database);
   if (!isset($field['id'])) {
     return json_encode([
       'success' => false,
@@ -215,7 +277,7 @@ function receipt_getById($field)
   }
 
   $id = intval($field['id']);
-  $sql = "SELECT gr.id, gr.staff_id, gr.total_price, DATE_FORMAT(gr.date_create, '%Y-%m-%d') AS date_create
+  $sql = "SELECT gr.id, gr.staff_id, gr.total_price, DATE_FORMAT(gr.date_create, '%Y-%m-%d') AS date_create, gr.status
           FROM goodsreceipts gr
           WHERE gr.id = '$id'
           LIMIT 1";
@@ -238,6 +300,7 @@ function receipt_getById($field)
 function receipt_update($field)
 {
   $database = new connectDB();
+  receipt_ensureStatusColumn($database);
 
   if (!isset($field['id']) || !isset($field['details']) || !is_array($field['details'])) {
     return "<span class='failed'>Dữ liệu cập nhật không hợp lệ</span>";
@@ -246,6 +309,17 @@ function receipt_update($field)
   $receiptId = intval($field['id']);
   $newDetails = $field['details'];
   $newDateCreate = isset($field['date_create']) ? $field['date_create'] : null;
+
+  // Không cho phép sửa phiếu đã hoàn thành
+  $statusSql = "SELECT status FROM goodsreceipts WHERE id = '$receiptId' LIMIT 1";
+  $statusResult = $database->query($statusSql);
+  if (!$statusResult || $statusResult->num_rows === 0) {
+    return "<span class='failed'>Không tìm thấy phiếu nhập cần sửa</span>";
+  }
+  $currentStatus = $statusResult->fetch_assoc()['status'];
+  if ($currentStatus === 'completed') {
+    return "<span class='failed'>Phiếu nhập đã hoàn thành, không thể sửa</span>";
+  }
 
   // Lấy chi tiết cũ của phiếu nhập
   $sqlOld = "SELECT product_id, quantity, input_price
@@ -286,6 +360,8 @@ function receipt_update($field)
   mysqli_begin_transaction($database->conn);
 
   try {
+    $affectedProductIds = [];
+
     // Cập nhật/Thêm chi tiết mới
     foreach ($normalized as $pid => $detail) {
       $newQty = intval($detail['quantity']);
@@ -325,6 +401,8 @@ function receipt_update($field)
           throw new Exception("Không thể cập nhật tồn kho sản phẩm");
         }
       }
+
+      $affectedProductIds[] = intval($pid);
     }
 
     // Xóa các dòng cũ không còn trong chi tiết mới
@@ -352,6 +430,8 @@ function receipt_update($field)
         if (!$database->execute($sqlUpdateStock)) {
           throw new Exception("Không thể cập nhật tồn kho khi xóa dòng");
         }
+
+        $affectedProductIds[] = intval($pid);
       }
     }
 
@@ -371,10 +451,44 @@ function receipt_update($field)
       throw new Exception("Không thể cập nhật tổng tiền phiếu nhập");
     }
 
+    foreach (array_unique($affectedProductIds) as $pid) {
+      if (!receipt_recalculateSellingPrice($database, $pid)) {
+        throw new Exception("Không thể đồng bộ giá bán theo giá nhập bình quân");
+      }
+    }
+
     mysqli_commit($database->conn);
     return "<span class='success'>Cập nhật phiếu nhập thành công</span>";
   } catch (Exception $e) {
     mysqli_rollback($database->conn);
     return "<span class='failed'>Cập nhật phiếu nhập thất bại: " . $e->getMessage() . "</span>";
   }
+}
+
+function receipt_complete($field)
+{
+  $database = new connectDB();
+  receipt_ensureStatusColumn($database);
+  if (!isset($field['id'])) {
+    return "<span class='failed'>Thiếu mã phiếu nhập</span>";
+  }
+
+  $receiptId = intval($field['id']);
+  $sqlCheck = "SELECT status FROM goodsreceipts WHERE id = '$receiptId' LIMIT 1";
+  $checkResult = $database->query($sqlCheck);
+
+  if (!$checkResult || $checkResult->num_rows === 0) {
+    return "<span class='failed'>Không tìm thấy phiếu nhập</span>";
+  }
+
+  $currentStatus = $checkResult->fetch_assoc()['status'];
+  if ($currentStatus === 'completed') {
+    return "<span class='failed'>Phiếu nhập đã ở trạng thái hoàn thành</span>";
+  }
+
+  $sqlUpdate = "UPDATE goodsreceipts SET status = 'completed' WHERE id = '$receiptId'";
+  if ($database->execute($sqlUpdate)) {
+    return "<span class='success'>Đã hoàn thành phiếu nhập</span>";
+  }
+  return "<span class='failed'>Không thể hoàn thành phiếu nhập</span>";
 }

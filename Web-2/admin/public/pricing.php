@@ -84,7 +84,7 @@ $_SESSION["render"]->setTable("products");
                             <th>Mã sản phẩm</th>
                             <th>Tên sản phẩm</th>
                             <th>Nhà cung cấp</th>
-                            <th>Giá bán theo lô</th>
+                            <th>Giá bán hiện tại</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>

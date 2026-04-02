@@ -29,6 +29,9 @@ if (isset($_POST['function'])) {
     case 'getById':
       getReceiptById();
       break;
+    case 'complete':
+      completeReceipt();
+      break;
   }
 }
 
@@ -78,5 +81,12 @@ function getReceiptById()
 {
   if (isset($_POST['field'])) {
     echo receipt_getById($_POST['field']);
+  }
+}
+
+function completeReceipt()
+{
+  if (isset($_POST['field'])) {
+    echo receipt_complete($_POST['field']);
   }
 }

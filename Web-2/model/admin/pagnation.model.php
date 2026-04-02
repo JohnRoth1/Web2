@@ -248,6 +248,7 @@ class pagnation
                                             <th>Người nhập đơn</th>
                                             <th>Tổng tiền</th>
                                             <th>Ngày tạo</th>
+                                            <th>Trạng thái</th>
                                             <th>Hành động</th>
                                         </tr>
                                     </thead>
@@ -275,9 +276,13 @@ class pagnation
                             echo '<td class="total_price">';
                             echo  money_format($row['total_price']) . '</td>';
                             echo '<td class="date_create">' . $row['date_create'] . '</td>';
+                            $receiptStatus = isset($row['status']) ? $row['status'] : 'draft';
+                            $statusLabel = $receiptStatus === 'completed' ? 'Hoàn thành' : 'Nháp';
+                            echo '<td class="receipt_status" data-status="' . $receiptStatus . '">' . $statusLabel . '</td>';
 
                             echo '<td class="actions">
-                                    <button class="actions--edit">Xem chi tiết</button>
+                                    <button class="actions--edit">Xem/Sửa</button>
+                                    <button class="actions--complete" ' . ($receiptStatus === 'completed' ? 'disabled' : '') . '>Hoàn thành</button>
                                 </td>
                             </tr>';
                         }
@@ -301,7 +306,7 @@ class pagnation
                                     <th data-order="staff_id">Mã NV</th>
                                     <th data-order="date_create">Ngày tạo</th>
                                     <th data-order="total_price">Tổng giá</th>
-                                    <th>Địa chỉ giao</th>
+                                    <th data-order="delivery_ward">Địa chỉ giao</th>
                                     <th>Trạng thái</th>
                                     <th>Mã giảm giá</th>
                                     <th>Hành động</th>
@@ -329,7 +334,7 @@ class pagnation
                             $result_address = $database->query($sql_address);
                             $row_address = mysqli_fetch_array($result_address);
 
-                            echo '<td class="address">' . $row_address['address'] . ', ' . $row_address['ward'] . ', ' . $row_address['district'] . ', ' . $row_address['city'] . '</td>';
+                            echo '<td class="address" data-ward="' . $row_address['ward'] . '">' . $row_address['address'] . ', ' . $row_address['ward'] . ', ' . $row_address['district'] . ', ' . $row_address['city'] . '</td>';
 
                             $sql_status = 'SELECT * from order_statuses WHERE id="' . $row[5] . '"';
                             $result_status  = $database->query($sql_status);
@@ -1074,19 +1079,10 @@ function getUserFilterSQL($data)
 function getOrderFilterSQL($data)
 {
     $filter = "";
-    $join = "";
-
-    $needJoinDeliveryInfo = false;
+    // Luôn join delivery_infoes để hỗ trợ sort theo phường
+    $join = " INNER JOIN delivery_infoes di ON di.user_info_id = orders.delivery_info_id";
 
     if (!empty($data)) {
-        if (!empty($data['id_customer']) || !empty($data['address'])) {
-            $needJoinDeliveryInfo = true;
-        }
-
-        if ($needJoinDeliveryInfo) {
-            $join = " INNER JOIN delivery_infoes di ON di.user_info_id = orders.delivery_info_id";
-        }
-
         if (!empty($data['id_customer'])) {
             if ($filter != "") $filter .= " AND ";
             $filter .= "di.user_id LIKE '%" . addslashes($data['id_customer']) . "%'";

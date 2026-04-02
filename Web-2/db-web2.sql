@@ -448,18 +448,19 @@ CREATE TABLE `goodsreceipts` (
   `id` int(11) NOT NULL,
   `staff_id` varchar(50) NOT NULL,
   `total_price` double NOT NULL,
-  `date_create` date NOT NULL
+  `date_create` date NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'draft'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Đang đổ dữ liệu cho bảng `goodsreceipts`
 --
 
-INSERT INTO `goodsreceipts` (`id`, `staff_id`, `total_price`, `date_create`) VALUES
-(1, 'admin', 5232000, '2026-04-02'),
-(2, 'staff', 4900000, '2026-03-20'),
-(3, 'admin', 1430400, '2026-04-02'),
-(5, 'admin', 110585000, '2026-04-02');
+INSERT INTO `goodsreceipts` (`id`, `staff_id`, `total_price`, `date_create`, `status`) VALUES
+(1, 'admin', 5232000, '2026-04-02', 'completed'),
+(2, 'staff', 4900000, '2026-03-20', 'completed'),
+(3, 'admin', 1430400, '2026-04-02', 'draft'),
+(5, 'admin', 110585000, '2026-04-02', 'draft');
 
 -- --------------------------------------------------------
 

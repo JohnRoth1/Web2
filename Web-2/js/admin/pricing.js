@@ -252,7 +252,7 @@ function initializeEventListeners() {
         alert(
           `Đã áp dụng tăng ${result.increase_percent}% lợi nhuận cho tất cả sản phẩm.\n\n` +
           `Cập nhật: ${result.updated}\n` +
-          `Bỏ qua (giá hiện tại <= 0): ${result.skipped_no_price}\n` +
+          `Bỏ qua (không có giá nhập bình quân): ${result.skipped_no_cost}\n` +
           `Thất bại: ${result.failed}`
         );
         $("#profitMarginIncrease").val("");
@@ -567,7 +567,7 @@ function displayBatchDetails(result) {
           <button class="btn-action btn-edit-batch-margin" 
                   data-product-id="${product.product_id}" 
                   data-product-name="${product.product_name}"
-                  data-average-cost="${product.cost_price}"
+                  data-average-cost="${product.average_cost_price || product.cost_price}"
                   data-margin="${marginValue}">
             <i class="fas fa-percent"></i> Sửa
           </button>
