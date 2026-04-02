@@ -40,6 +40,14 @@ if (isset($_POST['function'])) {
       ]);
     }
   }
+  elseif ($func == 'increaseProfitMarginAll') {
+    if (isset($_POST['increase_percent'])) {
+      $increase_percent = $_POST['increase_percent'];
+      $result = pricing_increaseProfitMarginAll($increase_percent);
+      header('Content-Type: application/json');
+      echo json_encode($result);
+    }
+  }
   elseif ($func == 'getReceipts') {
     $search = isset($_POST['search']) ? $_POST['search'] : '';
     $page = isset($_POST['page']) ? intval($_POST['page']) : 1;

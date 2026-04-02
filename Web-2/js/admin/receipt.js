@@ -525,7 +525,7 @@ const openModal = addHtml => {
 
   const editHtml = `
 <div class="form">
-  <h2>Xem thông tin đơn nhập hàng</h2>
+  <h2>Sửa thông tin đơn nhập hàng</h2>
   <form id="form">
     <div class="input-field">
       <label for="idReceipt">Mã đơn nhập</label>
@@ -545,12 +545,15 @@ const openModal = addHtml => {
     </div>
     <div class="input-field">
       <label for="date_create">Ngày lập</label>
-      <input type="text" id="date_create" readonly="">
+      <input type="date" id="date_create">
     </div>
   
     <div class="book-table">
     <table id=Table> </table>
     </div>
+  <div class="form-actions" style="margin-top: 12px;">
+    <button type="button" id="saveReceiptBtn" class="btn">Lưu thay đổi</button>
+  </div>
 
 </div>`;
 
@@ -579,8 +582,22 @@ const openModal = addHtml => {
         this.closest("tr").querySelector(".total_price").innerHTML;
       document.getElementById("staff_idForm").value =
         this.closest("tr").querySelector(".staff_id").innerHTML;
-      document.getElementById("date_create").value =
-        this.closest("tr").querySelector(".date_create").innerHTML;
+      document.getElementById("date_create").value = "";
+
+      // Lấy ngày nhập từ DB để đảm bảo đúng dữ liệu gốc
+      $.ajax({
+        url: "../controller/admin/receipt.controller.php",
+        type: "post",
+        dataType: "json",
+        data: {
+          function: "getById",
+          field: { id: id }
+        }
+      }).done(function (res) {
+        if (res && res.success && res.data && res.data.date_create) {
+          document.getElementById("date_create").value = res.data.date_create;
+        }
+      });
 
       let Table = document.querySelector("#Table");
       Table.innerHTML = "";
@@ -596,25 +613,114 @@ const openModal = addHtml => {
         },
         success: function (response) {
           Table.innerHTML = response;
-          
-          // Tính tổng giá từ bảng chi tiết
+
+          // Cho phép chỉnh sửa trực tiếp số lượng và giá nhập
           const rows = Table.querySelectorAll("tbody tr");
+          rows.forEach(row => {
+            const cells = row.querySelectorAll("td");
+            if (cells.length >= 4) {
+              const qtyText = cells[2].textContent.trim().replace(/[^\d-]/g, "");
+              const priceText = cells[3].textContent.trim().replace(/[^\d-]/g, "");
+              const qty = parseInt(qtyText) || 0;
+              const price = parseInt(priceText) || 0;
+
+              cells[2].innerHTML = `<input type="number" class="edit-qty" min="1" value="${qty}" style="width: 100%;">`;
+              cells[3].innerHTML = `<input type="number" class="edit-input-price" min="1" value="${price}" style="width: 100%;">`;
+            }
+          });
+
+          // Tính tổng giá từ bảng chi tiết
           let totalPrice = 0;
           
           rows.forEach(row => {
-            // Lấy giá trị từ cột "Tổng Tiền" (cột cuối cùng)
             const cells = row.querySelectorAll("td");
-            if (cells.length > 0) {
-              const lastCell = cells[cells.length - 1];
-              // Lấy giá trị số từ text (loại bỏ ký tự ₫)
-              const priceText = lastCell.textContent.trim().replace(/[^\d]/g, '');
-              const price = parseInt(priceText) || 0;
-              totalPrice += price;
+            if (cells.length >= 4) {
+              const qty = parseInt(cells[2].querySelector(".edit-qty").value) || 0;
+              const price = parseInt(cells[3].querySelector(".edit-input-price").value) || 0;
+              const lineTotal = qty * price;
+              cells[cells.length - 1].textContent = lineTotal.toLocaleString("vi-VN") + "₫";
+              totalPrice += lineTotal;
             }
           });
-          
-          // Cập nhật input total_price
+
           document.getElementById("total_price").value = totalPrice.toLocaleString('vi-VN');
+
+          // Re-calc tổng tiền khi thay đổi input
+          Table.querySelectorAll(".edit-qty, .edit-input-price").forEach(input => {
+            input.addEventListener("input", () => {
+              const allRows = Table.querySelectorAll("tbody tr");
+              let nextTotal = 0;
+              allRows.forEach(r => {
+                const c = r.querySelectorAll("td");
+                if (c.length >= 4) {
+                  const q = parseInt(c[2].querySelector(".edit-qty").value) || 0;
+                  const p = parseInt(c[3].querySelector(".edit-input-price").value) || 0;
+                  const t = q * p;
+                  c[c.length - 1].textContent = t.toLocaleString("vi-VN") + "₫";
+                  nextTotal += t;
+                }
+              });
+              document.getElementById("total_price").value = nextTotal.toLocaleString("vi-VN");
+            });
+          });
+
+          // Lưu chỉnh sửa phiếu nhập
+          const saveBtn = document.getElementById("saveReceiptBtn");
+          if (saveBtn) {
+            saveBtn.onclick = function () {
+              const tableRows = Table.querySelectorAll("tbody tr");
+              const detailData = [];
+              let isValid = true;
+
+              tableRows.forEach(r => {
+                const c = r.querySelectorAll("td");
+                if (c.length >= 4) {
+                  const productId = c[0].textContent.trim();
+                  const qty = parseInt(c[2].querySelector(".edit-qty").value);
+                  const inputPrice = parseInt(c[3].querySelector(".edit-input-price").value);
+
+                  if (!Number.isInteger(qty) || qty <= 0 || !Number.isFinite(inputPrice) || inputPrice <= 0) {
+                    isValid = false;
+                    return;
+                  }
+
+                  detailData.push({
+                    productId: productId,
+                    quantity: qty,
+                    inputPrice: inputPrice
+                  });
+                }
+              });
+
+              if (!isValid || detailData.length === 0) {
+                alert("Vui lòng nhập số lượng và giá nhập hợp lệ (> 0).");
+                return;
+              }
+
+              $.ajax({
+                url: "../controller/admin/receipt.controller.php",
+                type: "post",
+                dataType: "html",
+                data: {
+                  function: "update",
+                  field: {
+                    id: id,
+                    date_create: document.getElementById("date_create").value,
+                    details: detailData
+                  }
+                }
+              }).done(function (resultText) {
+                $("#sqlresult").html(resultText);
+                setTimeout(() => {
+                  $("#sqlresult").html("");
+                }, 3000);
+                loadItem();
+                editModal.style.display = "none";
+              }).fail(function () {
+                alert("Lỗi khi cập nhật phiếu nhập.");
+              });
+            };
+          }
         },
       });
     });

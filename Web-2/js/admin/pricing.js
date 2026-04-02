@@ -143,7 +143,8 @@ function initializeEventListeners() {
     const productId = $(this).data("product-id");
     const productName = $(this).data("product-name");
     const averageCost = parseFloat($(this).data("average-cost"));
-    openBatchMarginModal(productId, productName, averageCost);
+    const currentMargin = parseFloat($(this).data("margin")) || 0;
+    openBatchMarginModal(productId, productName, averageCost, currentMargin);
   });
 
   // Batch Margin Modal - Save
@@ -210,6 +211,44 @@ function initializeEventListeners() {
   $(document).on("click", ".btn-view-batch-details", function () {
     const batchId = $(this).data("batch-id");
     viewBatchDetails(batchId);
+  });
+
+  // Increase profit margin for all products
+  $("#btnIncreaseProfitMargin").click(function () {
+    const increase = parseFloat($("#profitMarginIncrease").val());
+    if (Number.isNaN(increase) || increase < 0) {
+      alert("Vui lòng nhập % tăng lợi nhuận hợp lệ (>= 0)!");
+      return;
+    }
+
+    const ok = confirm(`Áp dụng tăng thêm ${increase}% lợi nhuận cho TẤT CẢ sản phẩm?\n\nLưu ý: Sẽ cập nhật giá bán hàng loạt và không thể hoàn tác tự động.`);
+    if (!ok) return;
+
+    $.ajax({
+      url: "../controller/admin/pricing.controller.php",
+      type: "POST",
+      dataType: "json",
+      data: {
+        function: "increaseProfitMarginAll",
+        increase_percent: increase
+      }
+    }).done(function (result) {
+      if (result && result.success) {
+        alert(
+          `Đã áp dụng tăng ${result.increase_percent}% lợi nhuận cho tất cả sản phẩm.\n\n` +
+          `Cập nhật: ${result.updated}\n` +
+          `Bỏ qua (giá hiện tại <= 0): ${result.skipped_no_price}\n` +
+          `Thất bại: ${result.failed}`
+        );
+        $("#profitMarginIncrease").val("");
+        if (currentView === 'byProduct') loadProducts();
+        else loadReceipts();
+      } else {
+        alert("Lỗi: " + ((result && result.message) ? result.message : "Không thể áp dụng tăng lợi nhuận"));
+      }
+    }).fail(function () {
+      alert("Lỗi khi áp dụng tăng lợi nhuận cho tất cả sản phẩm!");
+    });
   });
 }
 
@@ -317,6 +356,8 @@ function openDirectPriceModal(productId, productName, currentPrice) {
 
 function openMarginModal(productId, productName) {
   currentProductId = productId;
+  const currentProduct = allProducts.find(p => parseInt(p.id, 10) === parseInt(productId, 10));
+  const currentMargin = currentProduct ? (parseFloat(currentProduct.profit_margin) || 0) : 0;
   
   // Fetch average cost price from server
   $.ajax({
@@ -333,8 +374,9 @@ function openMarginModal(productId, productName) {
       
       $("#modalProductName2").text(productName);
       $("#modalInputPrice").text(formatPrice(currentProductAverageCostPrice));
-      $("#marginPercent").val("");
-      $("#calculatedPriceGroup").hide();
+      // Hiển thị sẵn % lợi nhuận đang áp dụng hiện tại
+      $("#marginPercent").val(currentMargin);
+      calculateMarginPrice();
       $("#marginModal").addClass("active");
       setTimeout(() => $("#marginPercent").focus(), 100);
     } else {
@@ -497,19 +539,21 @@ function displayBatchDetails(result) {
   }
 
   products.forEach(function (product) {
+    const marginValue = parseFloat(product.margin_percent) || 0;
     const html = `
       <tr>
         <td>${product.product_id}</td>
         <td>${product.product_name}</td>
         <td>${product.input_quantity}</td>
         <td>${formatPrice(product.cost_price)}</td>
-        <td>${product.margin_percent}%</td>
-        <td>${formatPrice(product.current_selling_price)}</td>
+        <td>${marginValue}%</td>
+        <td>${formatPrice(product.batch_selling_price)}</td>
         <td>
           <button class="btn-action btn-edit-batch-margin" 
                   data-product-id="${product.product_id}" 
                   data-product-name="${product.product_name}"
-                  data-average-cost="${product.cost_price}">
+                  data-average-cost="${product.cost_price}"
+                  data-margin="${marginValue}">
             <i class="fas fa-percent"></i> Sửa
           </button>
         </td>
@@ -519,15 +563,15 @@ function displayBatchDetails(result) {
   });
 }
 
-function openBatchMarginModal(productId, productName, averageCost) {
+function openBatchMarginModal(productId, productName, averageCost, currentMargin = 0) {
   currentBatchId = productId;
   currentBatchProductName = productName;
   currentProductAverageCostPrice = averageCost;
 
   $("#batchModalProductName").text(productName);
   $("#batchModalAverageCost").text(formatPrice(averageCost));
-  $("#batchMarginInput").val("");
-  $("#batchCalculatedPriceGroup").hide();
+  $("#batchMarginInput").val(currentMargin);
+  calculateBatchMarginPrice();
   $("#batchMarginModal").addClass("active");
   
   setTimeout(() => $("#batchMarginInput").focus(), 100);

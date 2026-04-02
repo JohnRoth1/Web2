@@ -88,6 +88,23 @@
   gap: 10px;
 }
 
+/* Keep "apply for all" input and button aligned */
+.profit-margin-section .form-group {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 260px;
+}
+
+.profit-margin-section .form-actions {
+  align-self: flex-end;
+}
+
+.profit-margin-section .form-actions .btn-save {
+  min-height: 42px;
+  padding: 10px 18px;
+  white-space: nowrap;
+}
+
 .table-section {
   background: white;
   padding: 20px;
@@ -594,6 +611,14 @@
 
   .filter-field input,
   .btn-filter {
+    width: 100%;
+  }
+
+  .profit-margin-section .form-actions {
+    width: 100%;
+  }
+
+  .profit-margin-section .form-actions .btn-save {
     width: 100%;
   }
 

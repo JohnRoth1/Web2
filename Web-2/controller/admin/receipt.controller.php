@@ -23,6 +23,12 @@ if (isset($_POST['function'])) {
     case 'getProductsNumber':
       getProductNumber();
       break;
+    case 'update':
+      updateReceipt();
+      break;
+    case 'getById':
+      getReceiptById();
+      break;
   }
 }
 
@@ -58,5 +64,19 @@ function getProductNumber()
 {
   if (isset($_POST['field'])) {
     echo receipt_getProductNumber($_POST['field']);
+  }
+}
+
+function updateReceipt()
+{
+  if (isset($_POST['field'])) {
+    echo receipt_update($_POST['field']);
+  }
+}
+
+function getReceiptById()
+{
+  if (isset($_POST['field'])) {
+    echo receipt_getById($_POST['field']);
   }
 }

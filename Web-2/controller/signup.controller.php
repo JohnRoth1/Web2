@@ -55,7 +55,10 @@ function registerAccount()
         isset($_POST['phoneNumberRegister']) &&
         isset($_POST['addressRegister']) &&
         isset($_POST['passwordRegister']) &&
-        isset($_POST['confirmPasswordRegister'])
+        isset($_POST['confirmPasswordRegister']) &&
+        isset($_POST['cityRegister']) &&
+        isset($_POST['districtRegister']) &&
+        isset($_POST['wardRegister'])
     ) {
         $email = $_POST['emailRegister'];
         $username = $_POST['usernameRegister'];
@@ -70,6 +73,11 @@ function registerAccount()
 
         $registerResult = registerNewAccount($username, $email, $fullname, $phoneNumber, $address, $password, $city, $district, $ward);
         echo json_encode($registerResult);
+    } else {
+        echo json_encode((object) [
+            'success' => false,
+            'message' => 'Thiếu thông tin đăng ký'
+        ]);
     }
 }
 

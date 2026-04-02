@@ -90,13 +90,42 @@ function checkRegister($username, $email)
 function registerNewAccount($username, $email, $fullname, $phoneNumber, $address, $password, $city, $district, $ward)
 {
     global $database;
+    $username = mysqli_real_escape_string($database->conn, $username);
+    $email = mysqli_real_escape_string($database->conn, $email);
+    $fullname = mysqli_real_escape_string($database->conn, $fullname);
+    $phoneNumber = mysqli_real_escape_string($database->conn, $phoneNumber);
+    $address = mysqli_real_escape_string($database->conn, $address);
+    $password = mysqli_real_escape_string($database->conn, $password);
+    $city = mysqli_real_escape_string($database->conn, $city);
+    $district = mysqli_real_escape_string($database->conn, $district);
+    $ward = mysqli_real_escape_string($database->conn, $ward);
+
+    // accounts.email đang FK tới verify_code.email, nên cần đảm bảo email tồn tại ở verify_code.
+    $sqlEnsureVerifyCode = "INSERT INTO verify_code (email, code, time_send)
+                            SELECT '$email', '000000', NOW()
+                            WHERE NOT EXISTS (
+                                SELECT 1 FROM verify_code WHERE email = '$email'
+                            )";
+    $database->execute($sqlEnsureVerifyCode);
+
     $sqlInsertAccount = "INSERT INTO accounts (username, password, role_id, status, email)
                         VALUES ('$username', '$password', 3, 1, '$email')";
     $sqlInsertUserInfo = "INSERT INTO delivery_infoes (user_id, fullname, phone_number, address, city, district, ward)
                           VALUES ('$username', '$fullname', '$phoneNumber', '$address', '$city', '$district', '$ward')";
 
     $resultInsertAccount = $database->execute($sqlInsertAccount);
+    if (!$resultInsertAccount) {
+        return (object) array(
+            'success' => false,
+            'message' => "Đã xảy ra lỗi khi đăng ký"
+        );
+    }
+
     $resultInsertUserInfo = $database->execute($sqlInsertUserInfo);
+    if (!$resultInsertUserInfo) {
+        // Tránh dữ liệu mồ côi nếu insert delivery_infoes lỗi.
+        $database->execute("DELETE FROM accounts WHERE username = '$username'");
+    }
 
     if ($resultInsertAccount && $resultInsertUserInfo) {
         return (object) array(

@@ -47,7 +47,7 @@ function pricing_getProducts()
   error_log("Pricing Model - Database connection: " . ($database->conn ? "Connected" : "Failed"));
   
   $sql = "
-    SELECT p.id, p.name, p.price, p.supplier_id, s.name as supplier_name
+    SELECT p.id, p.name, p.price, p.profit_margin, p.supplier_id, s.name as supplier_name
     FROM products p
     JOIN suppliers s ON p.supplier_id = s.id
     WHERE p.status = 1
@@ -111,9 +111,10 @@ function pricing_applyMargin($product_id, $margin_percent)
     
     error_log("pricing_applyMargin - Cost: $average_cost_price, New Price: $new_price");
     
-    // Update product price
+    // Update giá bán và lưu % lợi nhuận (ghi đè)
+    $margin_percent_safe = mysqli_real_escape_string($database->conn, strval($margin_percent));
     $sql_update = "UPDATE products 
-                   SET price = '$new_price', update_date = '$date' 
+                   SET price = '$new_price', profit_margin = '$margin_percent_safe', update_date = '$date' 
                    WHERE id = '$product_id'";
     
     $update_result = $database->execute($sql_update);
@@ -129,6 +130,75 @@ function pricing_applyMargin($product_id, $margin_percent)
   
   $database->close();
   return array('success' => false, 'message' => 'Không tìm thấy giá nhập cho sản phẩm này');
+}
+
+// Tăng thêm % lợi nhuận cho tất cả sản phẩm (dựa trên GIÁ BÁN HIỆN TẠI)
+function pricing_increaseProfitMarginAll($increase_percent)
+{
+  $database = new connectDB();
+  date_default_timezone_set('Asia/Ho_Chi_Minh');
+  $date = date('Y-m-d', time());
+
+  $increase = floatval($increase_percent);
+  if ($increase < 0) {
+    $database->close();
+    return [
+      'success' => false,
+      'message' => 'Phần trăm tăng phải >= 0'
+    ];
+  }
+
+  // Lấy toàn bộ sản phẩm đang hoạt động
+  $sqlProducts = "SELECT id, price FROM products WHERE status = 1 ORDER BY id ASC";
+  $result = $database->query($sqlProducts);
+
+  if (!$result) {
+    $err = $database->conn->error;
+    $database->close();
+    return [
+      'success' => false,
+      'message' => 'Không thể lấy danh sách sản phẩm: ' . $err
+    ];
+  }
+
+  $updated = 0;
+  $skippedNoPrice = 0;
+  $failed = 0;
+
+  while ($row = mysqli_fetch_assoc($result)) {
+    $product_id = $row['id'];
+    $current_price = floatval($row['price']);
+
+    if ($current_price <= 0) {
+      $skippedNoPrice++;
+      continue;
+    }
+
+    // Giá mới = Giá hiện tại * (1 + increase%)
+    $new_price = $current_price * (1 + ($increase / 100));
+
+    $product_id_safe = mysqli_real_escape_string($database->conn, $product_id);
+    $new_price_safe = mysqli_real_escape_string($database->conn, strval($new_price));
+    $increase_safe = mysqli_real_escape_string($database->conn, strval($increase));
+
+    $sql_update = "UPDATE products 
+                   SET price = '$new_price_safe', profit_margin = '$increase_safe', update_date = '$date' 
+                   WHERE id = '$product_id_safe'";
+
+    $ok = $database->execute($sql_update);
+    if ($ok) $updated++;
+    else $failed++;
+  }
+
+  $database->close();
+
+  return [
+    'success' => true,
+    'increase_percent' => $increase,
+    'updated' => $updated,
+    'skipped_no_price' => $skippedNoPrice,
+    'failed' => $failed
+  ];
 }
 
 // Lấy danh sách lô hàng (goods receipts) với pagination
@@ -242,6 +312,8 @@ function pricing_getBatchDetails($batch_id)
       p.name as product_name,
       grd.quantity as input_quantity,
       grd.input_price as cost_price,
+      COALESCE(p.profit_margin, 0) as margin_percent,
+      ROUND(grd.input_price * (1 + COALESCE(p.profit_margin, 0) / 100), 2) as batch_selling_price,
       p.price as current_selling_price,
       s.name as supplier_name,
       DATE_FORMAT(gr.date_create, '%d/%m/%Y') as batch_date
@@ -269,13 +341,6 @@ function pricing_getBatchDetails($batch_id)
   }
   
   while ($row = mysqli_fetch_assoc($result)) {
-    // Calculate margin
-    $margin = pricing_calculateMargin(
-      floatval($row['cost_price']),
-      floatval($row['current_selling_price'])
-    );
-    $row['margin_percent'] = $margin;
-    
     $data[] = $row;
     
     // Store batch info from first record

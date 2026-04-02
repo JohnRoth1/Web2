@@ -12,11 +12,33 @@ if (isset($_POST["product-action__addToCart"]) && $_POST['product-action__addToC
     return;
   }
 
-  $productId = $_POST['productId'];
+  $productId = intval($_POST['productId']);
   $amount = 1;
 
   if (isset($_POST['amount']) && $_POST['amount']) {
-    $amount = $_POST['amount'];
+    $amount = intval($_POST['amount']);
+  }
+  if ($amount < 1) {
+    $amount = 1;
+  }
+
+  $productInfo = getProductDetailByIdModel($productId);
+  if (!$productInfo || $productInfo->num_rows === 0) {
+    echo json_encode([
+      'success' => false,
+      'message' => "Sản phẩm không tồn tại hoặc đã ngừng bán!"
+    ]);
+    return;
+  }
+
+  $productInfo = $productInfo->fetch_assoc();
+  $stockQuantity = intval($productInfo['quantity']);
+  if ($stockQuantity <= 0) {
+    echo json_encode([
+      'success' => false,
+      'message' => "Sản phẩm hiện đã hết hàng!"
+    ]);
+    return;
   }
 
   // Khởi tạo session cart
@@ -33,11 +55,15 @@ if (isset($_POST["product-action__addToCart"]) && $_POST['product-action__addToC
 
   foreach ($_SESSION['cart'] as $key => $product) {
     if ($product['id'] == $productId) {
-      // if ($_SESSION['cart'][$key]['amount'] + $amount <= $product_quantity) {
-      //   $_SESSION['cart'][$key]['amount'] += $amount;
-      //   $isAmountExceed = false;
-      // }
-      $_SESSION['cart'][$key]['amount'] += $amount; // luôn cho phép cộng thêm
+      $nextAmount = $_SESSION['cart'][$key]['amount'] + $amount;
+      if ($nextAmount > $stockQuantity) {
+        echo json_encode([
+          'success' => false,
+          'message' => "Số lượng vượt quá tồn kho hiện tại!"
+        ]);
+        return;
+      }
+      $_SESSION['cart'][$key]['amount'] = $nextAmount;
       $isExistProduct = true;
       break;
     }
@@ -45,14 +71,18 @@ if (isset($_POST["product-action__addToCart"]) && $_POST['product-action__addToC
 
   // Nếu chưa tồn tại thì add vào cart
   if (!$isExistProduct) {
-    // if($amount <= $product_quantity){
+    if ($amount > $stockQuantity) {
+      echo json_encode([
+        'success' => false,
+        'message' => "Số lượng vượt quá tồn kho hiện tại!"
+      ]);
+      return;
+    }
       $product = [
         'id' => $productId,
         'amount' => $amount
       ];
       $_SESSION['cart'][] = $product;
-      // $isAmountExceed = false;
-    // }
   }
 
   // Đếm số lượng sản phẩm trong giỏ hàng
@@ -99,8 +129,20 @@ if (isset($_POST['abate']) && $_POST['abate']) {
 
 // Xử lý cập nhật số lượng sản phẩm
 if (isset($_POST["product-action__updateAmount"]) && $_POST['product-action__updateAmount']) {
-  $productId = $_POST['productId'];
-  $amount = $_POST['amount'];
+  $productId = intval($_POST['productId']);
+  $amount = intval($_POST['amount']);
+  if ($amount < 1) {
+    $amount = 1;
+  }
+
+  $productInfo = getProductDetailByIdModel($productId);
+  if ($productInfo && $productInfo->num_rows > 0) {
+    $productInfo = $productInfo->fetch_assoc();
+    $stockQuantity = intval($productInfo['quantity']);
+    if ($stockQuantity > 0 && $amount > $stockQuantity) {
+      $amount = $stockQuantity;
+    }
+  }
 
   foreach ($_SESSION['cart'] as $key => $product) {
     if ($product['id'] == $productId) {

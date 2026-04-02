@@ -203,3 +203,178 @@ function receipt_getProductNumber($field)
     ]);
   }
 }
+
+function receipt_getById($field)
+{
+  $database = new connectDB();
+  if (!isset($field['id'])) {
+    return json_encode([
+      'success' => false,
+      'message' => 'Thiếu mã phiếu nhập'
+    ]);
+  }
+
+  $id = intval($field['id']);
+  $sql = "SELECT gr.id, gr.staff_id, gr.total_price, DATE_FORMAT(gr.date_create, '%Y-%m-%d') AS date_create
+          FROM goodsreceipts gr
+          WHERE gr.id = '$id'
+          LIMIT 1";
+  $result = $database->query($sql);
+
+  if ($result && $result->num_rows > 0) {
+    $row = $result->fetch_assoc();
+    return json_encode([
+      'success' => true,
+      'data' => $row
+    ]);
+  }
+
+  return json_encode([
+    'success' => false,
+    'message' => 'Không tìm thấy phiếu nhập'
+  ]);
+}
+
+function receipt_update($field)
+{
+  $database = new connectDB();
+
+  if (!isset($field['id']) || !isset($field['details']) || !is_array($field['details'])) {
+    return "<span class='failed'>Dữ liệu cập nhật không hợp lệ</span>";
+  }
+
+  $receiptId = intval($field['id']);
+  $newDetails = $field['details'];
+  $newDateCreate = isset($field['date_create']) ? $field['date_create'] : null;
+
+  // Lấy chi tiết cũ của phiếu nhập
+  $sqlOld = "SELECT product_id, quantity, input_price
+             FROM goodsreceipt_details
+             WHERE goodsreceipt_id = '$receiptId'";
+  $oldResult = $database->query($sqlOld);
+  $oldDetails = [];
+  while ($row = $oldResult->fetch_assoc()) {
+    $pid = intval($row['product_id']);
+    $oldDetails[$pid] = [
+      'quantity' => intval($row['quantity']),
+      'input_price' => floatval($row['input_price'])
+    ];
+  }
+
+  if (count($oldDetails) === 0) {
+    return "<span class='failed'>Không tìm thấy phiếu nhập cần sửa</span>";
+  }
+
+  // Chuẩn hóa chi tiết mới (gộp theo product_id)
+  $normalized = [];
+  foreach ($newDetails as $detail) {
+    $pid = intval($detail['productId']);
+    $qty = intval($detail['quantity']);
+    $price = floatval($detail['inputPrice']);
+
+    if ($pid <= 0 || $qty <= 0 || $price <= 0) {
+      return "<span class='failed'>Chi tiết sản phẩm không hợp lệ</span>";
+    }
+
+    if (!isset($normalized[$pid])) {
+      $normalized[$pid] = ['quantity' => 0, 'input_price' => $price];
+    }
+    $normalized[$pid]['quantity'] += $qty;
+    $normalized[$pid]['input_price'] = $price;
+  }
+
+  mysqli_begin_transaction($database->conn);
+
+  try {
+    // Cập nhật/Thêm chi tiết mới
+    foreach ($normalized as $pid => $detail) {
+      $newQty = intval($detail['quantity']);
+      $newPrice = floatval($detail['input_price']);
+
+      $oldQty = isset($oldDetails[$pid]) ? intval($oldDetails[$pid]['quantity']) : 0;
+      $deltaQty = $newQty - $oldQty;
+
+      if (isset($oldDetails[$pid])) {
+        $sqlUpdateDetail = "UPDATE goodsreceipt_details
+                            SET quantity = '$newQty', input_price = '$newPrice'
+                            WHERE goodsreceipt_id = '$receiptId' AND product_id = '$pid'";
+        if (!$database->execute($sqlUpdateDetail)) {
+          throw new Exception("Không thể cập nhật chi tiết phiếu nhập");
+        }
+      } else {
+        $sqlInsertDetail = "INSERT INTO goodsreceipt_details (product_id, goodsreceipt_id, quantity, input_price)
+                            VALUES ('$pid', '$receiptId', '$newQty', '$newPrice')";
+        if (!$database->execute($sqlInsertDetail)) {
+          throw new Exception("Không thể thêm chi tiết phiếu nhập");
+        }
+      }
+
+      if ($deltaQty !== 0) {
+        $sqlGetStock = "SELECT quantity FROM products WHERE id = '$pid' FOR UPDATE";
+        $stockResult = $database->query($sqlGetStock);
+        if (!$stockResult || $stockResult->num_rows === 0) {
+          throw new Exception("Không tìm thấy sản phẩm để cập nhật tồn kho");
+        }
+        $currentStock = intval($stockResult->fetch_assoc()['quantity']);
+        if ($currentStock + $deltaQty < 0) {
+          throw new Exception("Không đủ tồn kho để cập nhật phiếu nhập");
+        }
+
+        $sqlUpdateStock = "UPDATE products SET quantity = quantity + ($deltaQty) WHERE id = '$pid'";
+        if (!$database->execute($sqlUpdateStock)) {
+          throw new Exception("Không thể cập nhật tồn kho sản phẩm");
+        }
+      }
+    }
+
+    // Xóa các dòng cũ không còn trong chi tiết mới
+    foreach ($oldDetails as $pid => $oldDetail) {
+      if (!isset($normalized[$pid])) {
+        $oldQty = intval($oldDetail['quantity']);
+
+        $sqlGetStock = "SELECT quantity FROM products WHERE id = '$pid' FOR UPDATE";
+        $stockResult = $database->query($sqlGetStock);
+        if (!$stockResult || $stockResult->num_rows === 0) {
+          throw new Exception("Không tìm thấy sản phẩm để cập nhật tồn kho");
+        }
+        $currentStock = intval($stockResult->fetch_assoc()['quantity']);
+        if ($currentStock - $oldQty < 0) {
+          throw new Exception("Không đủ tồn kho để xóa dòng chi tiết");
+        }
+
+        $sqlDeleteDetail = "DELETE FROM goodsreceipt_details
+                            WHERE goodsreceipt_id = '$receiptId' AND product_id = '$pid'";
+        if (!$database->execute($sqlDeleteDetail)) {
+          throw new Exception("Không thể xóa chi tiết phiếu nhập");
+        }
+
+        $sqlUpdateStock = "UPDATE products SET quantity = quantity - ($oldQty) WHERE id = '$pid'";
+        if (!$database->execute($sqlUpdateStock)) {
+          throw new Exception("Không thể cập nhật tồn kho khi xóa dòng");
+        }
+      }
+    }
+
+    // Tính lại tổng tiền phiếu nhập
+    $totalPrice = 0;
+    foreach ($normalized as $detail) {
+      $totalPrice += floatval($detail['quantity']) * floatval($detail['input_price']);
+    }
+    $sqlUpdateReceipt = "UPDATE goodsreceipts
+                         SET total_price = '$totalPrice'";
+    if (!empty($newDateCreate)) {
+      $dateSafe = mysqli_real_escape_string($database->conn, $newDateCreate);
+      $sqlUpdateReceipt .= ", date_create = '$dateSafe'";
+    }
+    $sqlUpdateReceipt .= " WHERE id = '$receiptId'";
+    if (!$database->execute($sqlUpdateReceipt)) {
+      throw new Exception("Không thể cập nhật tổng tiền phiếu nhập");
+    }
+
+    mysqli_commit($database->conn);
+    return "<span class='success'>Cập nhật phiếu nhập thành công</span>";
+  } catch (Exception $e) {
+    mysqli_rollback($database->conn);
+    return "<span class='failed'>Cập nhật phiếu nhập thất bại: " . $e->getMessage() . "</span>";
+  }
+}

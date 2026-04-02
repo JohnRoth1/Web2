@@ -77,7 +77,7 @@ $_SESSION["render"]->setTable("products");
                             <th>Mã sản phẩm</th>
                             <th>Tên sản phẩm</th>
                             <th>Nhà cung cấp</th>
-                            <th>Giá hiện tại</th>
+                            <th>Giá bán theo lô</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>
@@ -132,7 +132,7 @@ $_SESSION["render"]->setTable("products");
             <div class="modal-body">
                 <div class="modal-info">
                     <p><strong>Sản phẩm:</strong> <span id="modalProductName"></span></p>
-                    <p><strong>Giá hiện tại:</strong> <span id="modalCurrentPrice"></span></p>
+                    <p><strong>Giá bán hiện tại:</strong> <span id="modalCurrentPrice"></span></p>
                 </div>
                 <div class="form-group">
                     <label>Giá bán mới:</label>

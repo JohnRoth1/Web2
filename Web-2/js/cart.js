@@ -84,12 +84,12 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       const input = btnAddQnt.previousElementSibling;
       const maxQuantity = +btnAddQnt.getAttribute("data-max-quantity");
-      // if (+input.value < maxQuantity) {
-      input.value = +input.value + 1;
-      input.setAttribute("value", input.value);
-      updateTotalPricePerProduct(btnAddQnt);
-      updateTotalPrice();
-      // }
+      if (+input.value < maxQuantity) {
+        input.value = +input.value + 1;
+        input.setAttribute("value", input.value);
+        updateTotalPricePerProduct(btnAddQnt);
+        updateTotalPrice();
+      }
     });
   });
 
@@ -98,12 +98,12 @@ document.addEventListener("DOMContentLoaded", () => {
     btnSubQnt.addEventListener("click", (e) => {
       e.preventDefault();
       const input = btnSubQnt.nextElementSibling;
-      // if (+input.value > 1) {
-      input.value = +input.value - 1;
-      input.setAttribute("value", input.value);
-      updateTotalPricePerProduct(btnSubQnt);
-      updateTotalPrice();
-      //}
+      if (+input.value > 1) {
+        input.value = +input.value - 1;
+        input.setAttribute("value", input.value);
+        updateTotalPricePerProduct(btnSubQnt);
+        updateTotalPrice();
+      }
     });
   });
 
