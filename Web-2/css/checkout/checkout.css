@@ -720,3 +720,127 @@ fieldset {
     flex: 0 0 100%;
   }
 }
+
+/* ===== Phương thức thanh toán ===== */
+.payment-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.payment-option:has(input:checked) {
+  border-color: #0077b6;
+  background-color: #f0f8ff;
+}
+
+.payment-option label {
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.payment-option label i {
+  display: inline !important;
+  color: #0077b6;
+  font-size: 18px;
+}
+
+/* Bank transfer info panel */
+.bank-transfer-info {
+  margin: 4px 0 12px 36px;
+  border: 1px solid #bee3f8;
+  border-radius: 10px;
+  background: #f0f8ff;
+  overflow: hidden;
+}
+
+.bank-transfer-info.hide {
+  display: none;
+}
+
+.bank-transfer-card {
+  padding: 14px 18px;
+}
+
+.bank-transfer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #e0f0fb;
+  font-size: 14px;
+}
+
+.bank-transfer-row:last-of-type {
+  border-bottom: none;
+}
+
+.bank-label {
+  min-width: 130px;
+  color: #555;
+  font-weight: 500;
+}
+
+.bank-value {
+  color: #222;
+}
+
+.bank-accent {
+  color: #0077b6;
+  font-weight: 700;
+}
+
+.bank-transfer-note {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #fff8e1;
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #7a5c00;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.bank-transfer-note i {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* Online payment notice */
+.online-payment-notice {
+  margin: 4px 0 12px 36px;
+  border: 1px solid #f97316;
+  border-radius: 10px;
+  background: #fff7ed;
+  overflow: hidden;
+}
+
+.online-payment-notice.hide {
+  display: none;
+}
+
+.online-notice-card {
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #9a3412;
+}
+
+.online-notice-card i {
+  font-size: 18px;
+  color: #f97316;
+  flex-shrink: 0;
+}

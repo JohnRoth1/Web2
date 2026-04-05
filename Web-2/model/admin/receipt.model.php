@@ -14,6 +14,15 @@ function receipt_ensureStatusColumn($database)
   }
 }
 
+function receipt_ensureSupplierColumn($database)
+{
+  $checkSql = "SHOW COLUMNS FROM goodsreceipts LIKE 'supplier_id'";
+  $checkResult = $database->query($checkSql);
+  if (!$checkResult || $checkResult->num_rows === 0) {
+    $database->execute("ALTER TABLE goodsreceipts ADD COLUMN supplier_id INT(11) DEFAULT NULL");
+  }
+}
+
 function receipt_getAverageCostPrice($database, $productId)
 {
   $pid = intval($productId);
@@ -74,19 +83,20 @@ function receipt_create($field)
 {
   $database = new connectDB();
   receipt_ensureStatusColumn($database);
+  receipt_ensureSupplierColumn($database);
 
   date_default_timezone_set('Asia/Ho_Chi_Minh');
-  $date = date('Y-m-d', time());
+  $date = (!empty($field['dateCreate'])) ? $field['dateCreate'] : date('Y-m-d', time());
 
-  // $supplierId = $field['supplierId'];
+  $supplierId = isset($field['supplierId']) ? intval($field['supplierId']) : 'NULL';
   $totalPrice = $field['totalPrice'];
   $staffId = $field['staffId'];
   $receiptId = getNewReceiptId($database);
 
+  $supplierVal = ($supplierId === 'NULL') ? 'NULL' : "'" . $supplierId . "'";
 
-
-  $sqlInsertReceipt = "INSERT INTO goodsreceipts (id, staff_id, total_price, date_create, status) 
-                         VALUES ('" . $receiptId . "', '" . $staffId . "', '" . $totalPrice . "', '" . $date . "', 'draft')";
+  $sqlInsertReceipt = "INSERT INTO goodsreceipts (id, staff_id, total_price, date_create, status, supplier_id) 
+                         VALUES ('" . $receiptId . "', '" . $staffId . "', '" . $totalPrice . "', '" . $date . "', 'draft', " . $supplierVal . ")";
   $resultReceipt = $database->query($sqlInsertReceipt);
 
   if ($resultReceipt) {
@@ -269,6 +279,7 @@ function receipt_getById($field)
 {
   $database = new connectDB();
   receipt_ensureStatusColumn($database);
+  receipt_ensureSupplierColumn($database);
   if (!isset($field['id'])) {
     return json_encode([
       'success' => false,
@@ -277,8 +288,10 @@ function receipt_getById($field)
   }
 
   $id = intval($field['id']);
-  $sql = "SELECT gr.id, gr.staff_id, gr.total_price, DATE_FORMAT(gr.date_create, '%Y-%m-%d') AS date_create, gr.status
+  $sql = "SELECT gr.id, gr.staff_id, gr.total_price, DATE_FORMAT(gr.date_create, '%Y-%m-%d') AS date_create, gr.status,
+                 gr.supplier_id, COALESCE(s.name, '') AS supplier_name
           FROM goodsreceipts gr
+          LEFT JOIN suppliers s ON s.id = gr.supplier_id
           WHERE gr.id = '$id'
           LIMIT 1";
   $result = $database->query($sql);

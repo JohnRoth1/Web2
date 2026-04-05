@@ -13562,9 +13562,37 @@ const init = () => {
 
 init();
 
+// ===== Xử lý phương thức thanh toán =====
+function getSelectedPaymentMethod() {
+  const checked = document.querySelector("input[name='paymentMethod']:checked");
+  return checked ? checked.value : "cod";
+}
+
+function updateBankTransferAmount() {
+  const totalPrice = document.querySelector(".finalTotalPriceValue");
+  if (!totalPrice) return;
+  const amount = parseInt(totalPrice.value || 0);
+  const formatted = amount.toLocaleString("vi-VN") + "đ";
+  const amountEl = document.querySelector(".bank-transfer-info .bank-transfer-amount");
+  if (amountEl) amountEl.textContent = formatted;
+}
+
 $(document).ready(function () {
+  // Toggle hiển thị thông tin theo phương thức thanh toán
+  $("input[name='paymentMethod']").on("change", function () {
+    const val = $(this).val();
+    if (val === "bank_transfer") {
+      $("#bank-transfer-info").removeClass("hide");
+      updateBankTransferAmount();
+    } else {
+      $("#bank-transfer-info").addClass("hide");
+    }
+  });
+
  $(".xacNhanThanhToan").click(function (e) {
   e.preventDefault();
+
+  const paymentMethod = getSelectedPaymentMethod();
 
   const deliveryInfoId = document.querySelector("#diachi input").value;
 
@@ -13582,6 +13610,7 @@ $(document).ready(function () {
     deliveryInfoId,
     discountCode: isValidDiscountCode ? discountCode : null,
     totalPrice,
+    paymentMethod,
    },
   }).done(function (result) {
    const data = JSON.parse(result);

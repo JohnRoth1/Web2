@@ -258,17 +258,26 @@ class pagnation
                         while ($row = mysqli_fetch_array($result)) {
                             echo '<tr>';
                             echo '<td class="id">'  . $row['id'] . '</td>';
-                            // Truy vấn tên nhà cung cấp từ bảng 'suppliers'
-                            $sup_sql = "SELECT s.name
-                                        FROM goodsreceipts gr
-                                        INNER JOIN goodsreceipt_details gd ON gd.goodsreceipt_id = gr.id
-                                        INNER JOIN products p ON p.id = gd.product_id
-                                        INNER JOIN suppliers s ON s.id = p.supplier_id
-                                        WHERE gr.id = '" . $row['id'] . "'
-                                        LIMIT 1";
-                            $sup_result = $database->query($sup_sql);
-                            $supplier = mysqli_fetch_array($sup_result);
-                            $supplier_name = ($supplier) ? $supplier['name'] : '';
+                            // Truy vấn tên nhà cung cấp: ưu tiên supplier_id trực tiếp trên phiếu
+                            $supplier_name = '';
+                            if (!empty($row['supplier_id'])) {
+                              $sup_sql = "SELECT name FROM suppliers WHERE id = '" . intval($row['supplier_id']) . "' LIMIT 1";
+                              $sup_result = $database->query($sup_sql);
+                              $sup_row = mysqli_fetch_array($sup_result);
+                              $supplier_name = $sup_row ? $sup_row['name'] : '';
+                            }
+                            if ($supplier_name === '') {
+                              $sup_sql = "SELECT s.name
+                                          FROM goodsreceipts gr
+                                          INNER JOIN goodsreceipt_details gd ON gd.goodsreceipt_id = gr.id
+                                          INNER JOIN products p ON p.id = gd.product_id
+                                          INNER JOIN suppliers s ON s.id = p.supplier_id
+                                          WHERE gr.id = '" . $row['id'] . "'
+                                          LIMIT 1";
+                              $sup_result = $database->query($sup_sql);
+                              $supplier = mysqli_fetch_array($sup_result);
+                              $supplier_name = ($supplier) ? $supplier['name'] : '';
+                            }
 
                             echo '<td class="supplierName">' . $supplier_name . '</td>';
 

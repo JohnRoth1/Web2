@@ -99,12 +99,54 @@
             <div class="container">
                 <h3>PHƯƠNG THỨC THANH TOÁN</h3>
                 <!-- <hr> -->
-                <div class="form-group"><input id="id4" type="radio" name="id_test" value="" checked />
-                    <label for="id4"><i class="fa-solid fa-dong-sign"></i>Thanh toán bằng tiền mặt khi nhận hàng</label>
+                <div class="form-group payment-option">
+                    <input id="payment-cod" type="radio" name="paymentMethod" value="cod" checked />
+                    <label for="payment-cod">
+                        <i class="fa-solid fa-money-bill-wave"></i> Thanh toán tiền mặt khi nhận hàng
+                    </label>
                 </div>
-                <div class="form-group"><input id="id4" type="radio" name="id_test" value="" />
-                    <label for="idfake"><i class="fa-solid fa-dong-sign"></i>Thanh toán bằng thẻ ngân hàng(giao diện ảo do gv yêu cầu)</label>
+                <div class="form-group payment-option">
+                    <input id="payment-bank-transfer" type="radio" name="paymentMethod" value="bank_transfer" />
+                    <label for="payment-bank-transfer">
+                        <i class="fa-solid fa-building-columns"></i> Chuyển khoản ngân hàng
+                    </label>
                 </div>
+                <div class="bank-transfer-info hide" id="bank-transfer-info">
+                    <div class="bank-transfer-card">
+                        <div class="bank-transfer-row">
+                            <span class="bank-label">Ngân hàng</span>
+                            <span class="bank-value">Vietcombank (VCB)</span>
+                        </div>
+                        <div class="bank-transfer-row">
+                            <span class="bank-label">Số tài khoản</span>
+                            <span class="bank-value bank-accent">1234567890</span>
+                        </div>
+                        <div class="bank-transfer-row">
+                            <span class="bank-label">Chủ tài khoản</span>
+                            <span class="bank-value">BOOCIFY BOOKSTORE</span>
+                        </div>
+                        <div class="bank-transfer-row">
+                            <span class="bank-label">Số tiền</span>
+                            <span class="bank-value bank-accent bank-transfer-amount">--</span>
+                        </div>
+                        <div class="bank-transfer-row">
+                            <span class="bank-label">Nội dung CK</span>
+                            <span class="bank-value bank-accent" id="transfer-content">THANHTOAN [Tên của bạn]</span>
+                        </div>
+                        <p class="bank-transfer-note">
+                            <i class="fa-solid fa-circle-info"></i>
+                            Vui lòng chuyển khoản trước khi xác nhận. Đơn hàng sẽ được xử lý sau khi chúng tôi nhận được thanh toán.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="form-group payment-option">
+                    <input id="payment-online" type="radio" name="paymentMethod" value="online" />
+                    <label for="payment-online">
+                        <i class="fa-solid fa-credit-card"></i> Thanh toán trực tuyến
+                    </label>
+                </div>
+
 
             </div>
             <div class="container">
