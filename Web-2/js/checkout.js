@@ -30,7 +30,13 @@ function changeChecked() {
 }
 
 function changeAddressTmp() {
- var checked = document.querySelector("input[name=address]:checked").parentNode;
+ var checkedInput = document.querySelector("input[name=address]:checked");
+ if (!checkedInput) {
+  addressTmp = "";
+  addressIdTmp = "";
+  return;
+ }
+ var checked = checkedInput.parentNode;
  addressTmp =
   "<b>" +
   checked.querySelector(".name").innerHTML +
@@ -117,6 +123,11 @@ var open_update_menu = function () {
 // );
 
 document.getElementById("confirm-popup").addEventListener("click", () => {
+ const checkedInput = document.querySelector("input[name=address]:checked");
+ if (!checkedInput && document.querySelectorAll("input[name=address]").length > 0) {
+  alert("Vui lòng chọn một địa chỉ giao hàng");
+  return;
+ }
  // changeAddress();
  popupToggle(`diachiMenu`);
  popupOff(`addressMenu`);
@@ -13107,12 +13118,13 @@ $(document).ready(function () {
     } else if (data.type == "AR") {
      discountValue = +data.discount_value;
     }
+    discountValue = Math.round(discountValue || 0);
     const formatDiscountValue = discountValue.toLocaleString("vi-VN", {
      style: "currency",
      currency: "VND",
     });
 
-    const finalTotalPrice = totalPrice - discountValue;
+    const finalTotalPrice = Math.round(totalPrice - discountValue);
     const formatFinalTotalPrice = finalTotalPrice.toLocaleString("vi-VN", {
      style: "currency",
      currency: "VND",
@@ -13168,7 +13180,7 @@ $(document).ready(function () {
   $(".giam-gia").html("- 0 ₫");
 
   // Reset tổng số tiền
-  const totalPrice = +document.querySelector(".totalPriceValue").value;
+    const totalPrice = Math.round(+document.querySelector(".totalPriceValue").value);
   const formatFinalTotalPrice = totalPrice.toLocaleString("vi-VN", {
    style: "currency",
    currency: "VND",
@@ -13341,10 +13353,49 @@ function renderAllUserInfoByUserId() {
    // Lắng nghe sự kiện bấm vào nút 'cập nhật'
    document.querySelectorAll(".update").forEach((btn) =>
     btn.addEventListener("click", (e) => {
+         e.preventDefault();
+         e.stopPropagation();
      open_update_menu();
      autoFillOutWhenUpdateAdress(btn);
     })
    );
+     document.querySelectorAll(".delete-address").forEach((btn) =>
+        btn.addEventListener("click", (e) => {
+         e.preventDefault();
+         e.stopPropagation();
+         const userInfoId = btn.getAttribute("data-id");
+         const addressIndex = parseInt(btn.getAttribute("data-index"), 10);
+         if (!confirm("Bạn có chắc muốn xóa địa chỉ này không?")) {
+            return;
+         }
+
+         $.ajax({
+            type: "post",
+            url: "controller/delivery_info.controller.php",
+            dataType: "html",
+            data: {
+             function: "deleteUserInfo",
+             userInfoId,
+             modelPath: "../model",
+            },
+         }).done(function (result) {
+            const data = JSON.parse(result);
+            alert(data.message);
+            if (data.success) {
+             const totalAddress = document.querySelectorAll(".address-select").length;
+             if (totalAddress <= 1) {
+                indexAddressRadioChecked = 0;
+             } else if (addressIndex < indexAddressRadioChecked) {
+                indexAddressRadioChecked -= 1;
+             } else if (addressIndex === indexAddressRadioChecked) {
+                indexAddressRadioChecked = Math.max(0, indexAddressRadioChecked - 1);
+             }
+             renderAllUserInfoByUserId();
+             renderCurrentDeliveryAddress();
+            }
+         });
+        })
+     );
    document.querySelectorAll(".address-select").forEach((address, index) =>
     address.addEventListener("click", () => {
      indexAddressRadioChecked = index;
@@ -13361,6 +13412,7 @@ function renderAllUserInfoByUserId() {
     updatePhoneNumber.value = "";
     updateAddressForm.value = "";
     citySelect.value = "Chọn Tỉnh/Thành phố";
+    changeQuanHuyen();
     districtSelect.value = "";
     wardSelect.value = "";
     open_update_menu();
@@ -13394,6 +13446,19 @@ function renderUserInfoHTML(data) {
  const addressContainer = document.querySelector(".address-container");
  addressContainer.innerHTML = "";
 
+ if (!Array.isArray(data) || data.length === 0) {
+    addressContainer.innerHTML = `<div class="address-empty">Bạn chưa có địa chỉ nào. Hãy thêm địa chỉ mới.</div>`;
+    const btnAddNew = `<form action="" method="post">
+                                            <input type="button" class="addNewAddress" value="Thêm địa chỉ mới">
+                                        </form>`;
+    addressContainer.insertAdjacentHTML("beforeend", btnAddNew);
+    return;
+ }
+
+ if (indexAddressRadioChecked >= data.length) {
+    indexAddressRadioChecked = 0;
+ }
+
  data.forEach((address, index) => {
   const tinh = `${address.ward}, ${address.district}, ${address.city}`;
   let checked = index === indexAddressRadioChecked ? "checked" : "";
@@ -13416,7 +13481,10 @@ function renderUserInfoHTML(data) {
                     <span class="sdt">(+84) ${address.phone_number.slice(
                      1
                     )}</span>
-                    <span class="updatebig update">Cập nhật</span>
+                                        <span class="address-actions">
+                                            <span class="updatebig update">Sửa</span>
+                                            <span class="delete-address" data-id="${address.user_info_id}" data-index="${index}">Xóa</span>
+                                        </span>
                     <span class="diachi">${address.address}</span>
                     <span class="tinh">${tinh}</span>
                   </label>`;
@@ -13453,6 +13521,11 @@ function renderCurrentDeliveryAddress() {
 function renderHTMLCurrentDeliveryAddress(data) {
  const diachiContainer = document.querySelector("#diachi");
  diachiContainer.innerHTML = "";
+
+ if (!data) {
+  diachiContainer.innerHTML = `<span class="no-delivery-address">Chưa có địa chỉ nhận hàng. Vui lòng thêm địa chỉ.</span>`;
+  return;
+ }
 
  const address = `${data.address}, ${data.ward}, ${data.district}, ${data.city}`; // Thay đổi ở đây
  const html = `
@@ -13558,6 +13631,30 @@ function validFormUpdateUserInfoAddress() {
 const init = () => {
  renderAllUserInfoByUserId();
  renderCurrentDeliveryAddress();
+
+ const params = new URLSearchParams(window.location.search);
+ if (params.get("manageAddress") === "1") {
+    document.body.classList.add("manage-address-only");
+
+    const checkoutContainers = document.querySelectorAll("#checkout-form > .container");
+    checkoutContainers.forEach((container, index) => {
+     if (index > 0) {
+        container.style.display = "none";
+     }
+    });
+
+    const submitSection = document.querySelector(".form-submit");
+    if (submitSection) {
+     submitSection.style.display = "none";
+    }
+
+  setTimeout(() => {
+   const openAddressBtn = document.querySelector(".popupbutton");
+   if (openAddressBtn) {
+    openAddressBtn.click();
+   }
+  }, 250);
+ }
 };
 
 init();
@@ -13571,10 +13668,70 @@ function getSelectedPaymentMethod() {
 function updateBankTransferAmount() {
   const totalPrice = document.querySelector(".finalTotalPriceValue");
   if (!totalPrice) return;
-  const amount = parseInt(totalPrice.value || 0);
+    const amount = Math.round(parseFloat(totalPrice.value || 0));
   const formatted = amount.toLocaleString("vi-VN") + "đ";
   const amountEl = document.querySelector(".bank-transfer-info .bank-transfer-amount");
   if (amountEl) amountEl.textContent = formatted;
+}
+
+function formatCheckoutMoney(value) {
+        return `${Math.round(parseFloat(value) || 0).toLocaleString("vi-VN")}đ`;
+}
+
+function formatCheckoutDateTime(dateString) {
+    if (!dateString) return "";
+    const date = new Date(dateString.replace(" ", "T"));
+    if (Number.isNaN(date.getTime())) return dateString;
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${hours}:${minutes} ${day}/${month}/${year}`;
+}
+
+function renderOrderSuccessSummary(orderSummary) {
+    const modal = document.querySelector(".orderSuccessSummary-container");
+    if (!modal || !orderSummary) return;
+
+    const deliveryInfo = orderSummary.delivery_info || {};
+    const items = Array.isArray(orderSummary.items) ? orderSummary.items : [];
+    const itemContainer = modal.querySelector(".orderSuccessSummary-items");
+
+    modal.querySelector(".summary-order-id").textContent = `#${orderSummary.order_id}`;
+    modal.querySelector(".summary-created-at").textContent = formatCheckoutDateTime(orderSummary.created_at);
+    modal.querySelector(".summary-payment-method").textContent = orderSummary.payment_method || "-";
+    modal.querySelector(".summary-total-price").textContent = formatCheckoutMoney(orderSummary.total_price);
+    modal.querySelector(".summary-subtotal").textContent = formatCheckoutMoney(orderSummary.subtotal);
+    modal.querySelector(".summary-discount-value").textContent = `- ${formatCheckoutMoney(orderSummary.discount_value)}`;
+    modal.querySelector(".summary-discount-code").textContent = orderSummary.discount_code || "Không áp dụng";
+    modal.querySelector(".summary-delivery-info").innerHTML = `
+        <p><strong>${deliveryInfo.fullname || ""}</strong> ${deliveryInfo.phone_number || ""}</p>
+        <p>${deliveryInfo.address || ""}, ${deliveryInfo.ward || ""}, ${deliveryInfo.district || ""}, ${deliveryInfo.city || ""}</p>
+    `;
+
+    itemContainer.innerHTML = "";
+    items.forEach((item) => {
+        itemContainer.insertAdjacentHTML(
+            "beforeend",
+            `
+                <div class="orderSuccessSummary-item">
+                    <img src="${item.image_path}" alt="${item.product_name}">
+                    <div class="summary-item-info">
+                        <strong>${item.product_name}</strong>
+                        <span>Số lượng: ${item.quantity}</span>
+                    </div>
+                    <div class="summary-item-price">
+                        <span>${formatCheckoutMoney(item.price)}</span>
+                        <strong>${formatCheckoutMoney(item.line_total)}</strong>
+                    </div>
+                </div>
+            `
+        );
+    });
+
+    modal.classList.remove("hide");
+    document.body.style.overflow = "hidden";
 }
 
 $(document).ready(function () {
@@ -13594,7 +13751,13 @@ $(document).ready(function () {
 
   const paymentMethod = getSelectedPaymentMethod();
 
-  const deliveryInfoId = document.querySelector("#diachi input").value;
+    const deliveryInput = document.querySelector("#diachi input");
+    if (!deliveryInput) {
+     alert("Vui lòng thêm và chọn địa chỉ giao hàng trước khi đặt hàng");
+     return;
+    }
+
+    const deliveryInfoId = deliveryInput.value;
 
   const isValidDiscountCode = document.querySelector(".promoBtn.hide");
   const discountCode = document.querySelector("#promotion").value;
@@ -13604,7 +13767,7 @@ $(document).ready(function () {
   $.ajax({
    type: "post",
    url: "controller/checkout.controller.php",
-   dataType: "html",
+    dataType: "json",
    data: {
     isCheckout: true,
     deliveryInfoId,
@@ -13613,7 +13776,7 @@ $(document).ready(function () {
     paymentMethod,
    },
   }).done(function (result) {
-   const data = JSON.parse(result);
+    const data = result;
    if (data.successEnoughAll != undefined && !data.successEnoughAll) {
     alert(data.message);
     const modalTbody = document.querySelector(".table-container tbody");
@@ -13630,8 +13793,7 @@ $(document).ready(function () {
      .querySelector(".modalNotEnoughQuantity-container")
      .classList.remove("hide");
    } else if (data?.successAddNewOrder) {
-    alert(data.message);
-    window.location.href = "index.php?page=order";
+        renderOrderSuccessSummary(data.orderSummary);
    } else {
     alert(data.message);
    }

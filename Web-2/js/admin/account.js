@@ -13263,6 +13263,7 @@ var js = function () {
 </div>
   <div class="form-actions">
       <button class="closeBtn">Hủy</button>
+      <button type="button" class="resetPass">Reset mật khẩu</button>
       <button type="submit" class="changePass">Lưu</button>
   </div>
   `;
@@ -13342,6 +13343,37 @@ var js = function () {
               alert("Nhập sai mật khẩu hiện tại.");
             } else {
               alert("Thay đổi mật khẩu thành công.");
+              modal.style.display = "none";
+            }
+            $("#sqlresult").html(result);
+            loadItem();
+          });
+        });
+
+      document
+        .querySelector(".resetPass")
+        .addEventListener("click", function (e) {
+          e.preventDefault();
+          if (!confirm("Xác nhận reset mật khẩu tài khoản này về mặc định 123456?")) {
+            return;
+          }
+
+          $.ajax({
+            url: "../controller/admin/account.controller.php",
+            type: "post",
+            dataType: "html",
+            data: {
+              function: "resetPasswordDefault",
+              field: {
+                username: username,
+              },
+            },
+          }).done(function (result) {
+            var className = $(result).attr("class");
+            if (className == "failed") {
+              alert("Reset mật khẩu thất bại.");
+            } else {
+              alert("Đã reset mật khẩu về mặc định 123456.");
               modal.style.display = "none";
             }
             $("#sqlresult").html(result);

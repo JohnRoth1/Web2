@@ -30,9 +30,44 @@ $_SESSION["render"]->setTable("products");
 
             <!-- Filter for By Product -->
             <div id="filterByProduct" class="filter-group-by-product active-filter">
-                <div class="filter-field" style="flex: 1; min-width: 250px;">
-                    <label>Tìm kiếm sản phẩm</label>
-                    <input type="text" id="searchProduct" placeholder="Nhập mã hoặc tên sản phẩm..." />
+                <div class="product-filter-row product-filter-row-search">
+                    <div class="filter-field" style="flex: 1; min-width: 250px;">
+                        <label>Tìm kiếm sản phẩm</label>
+                        <input type="text" id="searchProduct" placeholder="Nhập mã, tên hoặc nhà cung cấp..." />
+                    </div>
+                </div>
+
+                <div class="product-filter-row product-filter-row-ranges">
+                    <div class="filter-field filter-range-group">
+                        <label>Giá vốn</label>
+                        <div class="filter-range-inputs">
+                            <input type="text" id="costPriceMin" class="price-filter-input" placeholder="Từ" inputmode="numeric" />
+                            <span>đến</span>
+                            <input type="text" id="costPriceMax" class="price-filter-input" placeholder="Đến" inputmode="numeric" />
+                        </div>
+                    </div>
+                    <div class="filter-field filter-range-group">
+                        <label>Giá bán</label>
+                        <div class="filter-range-inputs">
+                            <input type="text" id="sellingPriceMin" class="price-filter-input" placeholder="Từ" inputmode="numeric" />
+                            <span>đến</span>
+                            <input type="text" id="sellingPriceMax" class="price-filter-input" placeholder="Đến" inputmode="numeric" />
+                        </div>
+                    </div>
+                    <div class="filter-field filter-range-group">
+                        <label>Lợi nhuận (%)</label>
+                        <div class="filter-range-inputs">
+                            <input type="number" id="marginMin" placeholder="Từ" min="0" step="0.1" />
+                            <span>đến</span>
+                            <input type="number" id="marginMax" placeholder="Đến" min="0" step="0.1" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="product-filter-row product-filter-row-actions">
+                    <button class="btn-filter btn-filter-secondary" id="btnResetProductFilters" type="button">
+                        <i class="fas fa-rotate-left"></i> Xóa lọc
+                    </button>
                 </div>
             </div>
 
@@ -84,14 +119,27 @@ $_SESSION["render"]->setTable("products");
                             <th>Mã sản phẩm</th>
                             <th>Tên sản phẩm</th>
                             <th>Nhà cung cấp</th>
+                            <th>Giá vốn</th>
                             <th>Giá bán hiện tại</th>
+                            <th>Lợi nhuận (%)</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="pricingTableBody">
-                        <tr><td colspan="5" class="text-center">Đang tải dữ liệu...</td></tr>
+                        <tr><td colspan="7" class="text-center">Đang tải dữ liệu...</td></tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div id="productPaginationContainer" class="pagination-container" style="display: none;">
+                <div class="pagination-info">
+                    Hiển thị <span id="productPageInfo">0-0</span> trong <span id="productTotalInfo">0</span> sản phẩm
+                </div>
+                <div class="pagination-buttons">
+                    <button class="btn-pagination" id="productPrevBtn"><i class="fas fa-chevron-left"></i> Trước</button>
+                    <span class="page-numbers" id="productPageNumbers"></span>
+                    <button class="btn-pagination" id="productNextBtn">Sau <i class="fas fa-chevron-right"></i></button>
+                </div>
             </div>
         </div>
 
@@ -124,30 +172,6 @@ $_SESSION["render"]->setTable("products");
                     <button class="btn-pagination" id="batchPrevBtn"><i class="fas fa-chevron-left"></i> Trước</button>
                     <span class="page-numbers" id="batchPageNumbers"></span>
                     <button class="btn-pagination" id="batchNextBtn">Sau <i class="fas fa-chevron-right"></i></button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal cập nhật giá trực tiếp -->
-    <div id="directPriceModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Nhập giá bán mới</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-info">
-                    <p><strong>Sản phẩm:</strong> <span id="modalProductName"></span></p>
-                    <p><strong>Giá bán hiện tại:</strong> <span id="modalCurrentPrice"></span></p>
-                </div>
-                <div class="form-group">
-                    <label>Giá bán mới:</label>
-                    <input type="number" id="newPrice" placeholder="Nhập giá mới" step="100" />
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-save" id="btnSavePrice">Lưu giá</button>
-                    <button class="btn-cancel" id="btnCancelPrice">Hủy</button>
                 </div>
             </div>
         </div>

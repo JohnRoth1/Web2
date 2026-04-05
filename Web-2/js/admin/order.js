@@ -7,8 +7,7 @@ function getFilterFromURL() {
   filter_form.querySelector("#idStaff").value =
     urlParams["idStaff"] != null ? urlParams["idStaff"] : "";
   filter_form.querySelector("#statusSelect").value =
-    urlParams["status"] != null ? urlParams["status"] : "";
-  // FIXED: Added proper handling for the address value from URL params
+    urlParams["status"] != null ? urlParams["status"] : "all";
   filter_form.querySelector("#address").value =
     urlParams["address"] != null ? urlParams["address"] : "";
   filter_form.querySelector("#date_begin").value =
@@ -25,28 +24,25 @@ function pushFilterToURL() {
     Order_status: "status",
     date_begin: "date_begin",
     date_end: "date_end",
-    // FIXED: Added the address mapping that was missing in the url_key object
     address: "address",
   };
-  var url = "";
+  var params = new URLSearchParams();
   Object.keys(filter).forEach((key) => {
-    url +=
-      filter[key] != null && filter[key] != ""
-        ? `&${url_key[key]}=${filter[key]}`
-        : "";
+    if (filter[key] == null || filter[key] === "") return;
+    if (key === "Order_status" && filter[key] === "all") return;
+    params.set(url_key[key], filter[key]);
   });
-  return url;
+  return params.toString();
 }
 function getFilterFromForm() {
   return {
-    id_customer: filter_form.querySelector("#idCus").value,
-    id_staff: filter_form.querySelector("#idStaff").value,
-    id_Order: filter_form.querySelector("#idOrder").value,
+    id_customer: filter_form.querySelector("#idCus").value.trim(),
+    id_staff: filter_form.querySelector("#idStaff").value.trim(),
+    id_Order: filter_form.querySelector("#idOrder").value.trim(),
     Order_status: filter_form.querySelector("#statusSelect").value,
     date_begin: filter_form.querySelector("#date_begin").value,
     date_end: filter_form.querySelector("#date_end").value,
-    // FIXED: Added the address field to the filter object
-    address: filter_form.querySelector("#address").value,
+    address: filter_form.querySelector("#address").value.trim(),
   };
 }
 
@@ -55,31 +51,17 @@ var script = document.createElement("SCRIPT");
 script.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js";
 script.type = "text/javascript";
 document.getElementsByTagName("head")[0].appendChild(script);
-var search = location.search.substring(1);
-// FIXED: Added error handling for empty search string or malformed URL parameters
-urlParams = {};
-if (search) {
-  try {
-    urlParams = JSON.parse(
-      '{"' + search.replace(/&/g, '","').replace(/=/g, '":"') + '"}',
-      function (key, value) {
-        return key === "" ? value : decodeURIComponent(value);
-      }
-    );
-  } catch (e) {
-    console.error("Error parsing URL parameters:", e);
-    urlParams = {};
-  }
-}
+var urlSearchParams = new URLSearchParams(window.location.search);
+var urlParams = Object.fromEntries(urlSearchParams.entries());
 
-var number_of_item = urlParams["item"];
-var current_page = urlParams["pag"];
+var number_of_item = parseInt(urlParams["item"], 10);
+var current_page = parseInt(urlParams["pag"] || urlParams["current_page"], 10);
 var orderby = urlParams["orderby"];
 var order_type = urlParams["order_type"];
-if (current_page == null) {
+if (!Number.isInteger(current_page) || current_page < 1) {
   current_page = 1;
 }
-if (number_of_item == null) {
+if (!Number.isInteger(number_of_item) || number_of_item < 1) {
   number_of_item = 5;
 }
 if (orderby == null) {
@@ -98,8 +80,8 @@ function checkReady() {
 }
 async function loadForFirstTime() {
   await checkReady();
-  // FIXED: Added getFilterFromURL call to properly load filter values from the URL when the page loads
   getFilterFromURL();
+  filterBtn();
   loadItem();
 }
 function pagnationBtn() {
@@ -152,33 +134,45 @@ function loadItem() {
         filter: filter,
       },
     }).done(function (result) {
+      var basePage = urlParams["page"] || "order";
+      var query = new URLSearchParams();
+      query.set("page", basePage);
+      query.set("item", number_of_item);
+      query.set("pag", current_page);
+      if (orderby) query.set("orderby", orderby);
+      if (order_type) query.set("order_type", order_type);
+
+      var filterQuery = pushFilterToURL();
+      if (filterQuery) {
+        var filterParams = new URLSearchParams(filterQuery);
+        filterParams.forEach((value, key) => query.set(key, value));
+      }
+
       var newurl =
         window.location.protocol +
         "//" +
         window.location.host +
         window.location.pathname +
-        "?page=" +
-        urlParams["page"] +
-        "&item=" +
-        number_of_item +
-        "&current_page=" +
-        current_page;
-      newurl += pushFilterToURL();
+        "?" +
+        query.toString();
+
+      urlParams = Object.fromEntries(query.entries());
       window.history.pushState({ path: newurl }, "", newurl);
       $(".result").html(result);
       pagnationBtn();
-      filterBtn();
       js();
     });
   });
 }
-// FIXED: Removed duplicate DOMContentLoaded event listener
 document.addEventListener("DOMContentLoaded", () => {
   loadForFirstTime();
 });
 
 function filterBtn() {
-  $(".body__filter--action__filter").click((e) => {
+  $(".body__filter--action__filter")
+    .off("click")
+    .on("click", (e) => {
+      e.preventDefault();
     current_page = 1;
     var idOrder = filter_form.querySelector("#idOrder").value.trim();
     var idCus = filter_form.querySelector("#idCus").value.trim();
@@ -192,7 +186,6 @@ function filterBtn() {
     const end_date_str = filter_form.querySelector("#date_end").value;
     const start_date = new Date(start_date_str);
     const end_date = new Date(end_date_str);
-    // FIXED: Added proper reference to the address field and message element
     var address = filter_form.querySelector("#address").value.trim();
     var message_address = filter_form.querySelector("#message_address");
 
@@ -208,7 +201,6 @@ function filterBtn() {
       message_idOrder.innerHTML = "";
     }
 
-    // FIXED: Uncommented and fixed customer ID validation
     if (!idCus.match(regex) && idCus !== "") {
       message_idCus.innerHTML = "*Mã khách hàng phải là kí tự số";
       filter_form.querySelector("#idCus").focus();
@@ -217,7 +209,6 @@ function filterBtn() {
       message_idCus.innerHTML = "";
     }
 
-    // FIXED: Uncommented and fixed staff ID validation
     if (!idStaff.match(regex) && idStaff !== "") {
       message_idStaff.innerHTML = "*Mã nhân viên phải là kí tự số";
       filter_form.querySelector("#idStaff").focus();
@@ -249,9 +240,7 @@ function filterBtn() {
       message_end.innerHTML = "";
     }
 
-    // FIXED: Added address validation to check for maximum length if needed
     if (address.length > 255) {
-      // Assuming 255 is max length for address in database
       message_address.innerHTML = "*Địa chỉ không được vượt quá 255 ký tự";
       filter_form.querySelector("#address").focus();
       check = false;
@@ -269,13 +258,15 @@ function filterBtn() {
       current_page = 1;
       loadItem();
     }
-  });
+    });
 
-  $(".body__filter--action__reset").click((e) => {
-    // FIXED: Reset form properly by resetting the actual form element
+  $(".body__filter--action__reset")
+    .off("click")
+    .on("click", (e) => {
+    e.preventDefault();
     filter_form.reset();
+    filter_form.querySelector("#statusSelect").value = "all";
 
-    // Clear all error messages
     var message_idOrder = filter_form.querySelector("#message_idOrder");
     var message_idCus = filter_form.querySelector("#message_idCus");
     var message_idStaff = filter_form.querySelector("#message_idStaff");
@@ -289,49 +280,18 @@ function filterBtn() {
     message_end.innerHTML = "";
     message_address.innerHTML = "";
 
-    check = true;
     current_page = 1;
-
-    // FIXED: After reset, clear all filters from the query
-    $.ajax({
-      url: "../controller/admin/pagnation.controller.php",
-      type: "post",
-      dataType: "html",
-      data: {
-        number_of_item: number_of_item,
-        current_page: current_page,
-        function: "render",
-        orderby: orderby,
-        order_type: order_type,
-        // FIXED: Sending an empty filter object to clear all filters
-        filter: {
-          id_customer: "",
-          id_staff: "",
-          id_Order: "",
-          Order_status: "",
-          date_begin: "",
-          date_end: "",
-          address: "",
-        },
-      },
-    }).done(function (result) {
-      var newurl =
-        window.location.protocol +
-        "//" +
-        window.location.host +
-        window.location.pathname +
-        "?page=" +
-        urlParams["page"] +
-        "&item=" +
-        number_of_item +
-        "&current_page=" +
-        current_page;
-      window.history.pushState({ path: newurl }, "", newurl);
-      $(".result").html(result);
-      pagnationBtn();
-      js();
+    loadItem();
     });
-  });
+
+  $(filter_form)
+    .off("keydown")
+    .on("keydown", "input, select", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        $(".body__filter--action__filter").trigger("click");
+      }
+    });
 }
 
 var js = function () {

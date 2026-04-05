@@ -207,16 +207,6 @@
   font-weight: 500;
 }
 
-.btn-edit-price {
-  background: #2196F3;
-  color: white;
-}
-
-.btn-edit-price:hover {
-  background: #1976D2;
-  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
-}
-
 .btn-edit-margin {
   background: #FF9800;
   color: white;
@@ -445,6 +435,60 @@
   align-items: flex-end;
 }
 
+.filter-group-by-product {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.product-filter-row {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  gap: 15px;
+}
+
+.product-filter-row-ranges {
+  flex-wrap: nowrap;
+}
+
+.product-filter-row .filter-field {
+  width: 100%;
+}
+
+.product-filter-row-actions {
+  justify-content: flex-end;
+}
+
+.product-filter-row-actions .btn-filter {
+  width: fit-content;
+}
+
+.filter-range-group {
+  min-width: 240px;
+}
+
+.product-filter-row-ranges .filter-range-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-range-inputs input {
+  min-width: 0;
+  width: 100%;
+}
+
+.filter-range-inputs span {
+  color: #666;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .filter-group-by-batch.active-filter {
   display: flex;
 }
@@ -466,6 +510,14 @@
 
 .btn-filter:hover {
   background: #45a049;
+}
+
+.btn-filter-secondary {
+  background: #6c757d;
+}
+
+.btn-filter-secondary:hover {
+  background: #5a6268;
 }
 
 /* ============ TABLE VIEW VARIANTS ============ */
@@ -584,6 +636,27 @@
   border-color: #4CAF50;
 }
 
+.product-page-btn {
+  padding: 4px 8px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s;
+}
+
+.product-page-btn:hover {
+  border-color: #4CAF50;
+  color: #4CAF50;
+}
+
+.product-page-btn.active {
+  background: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
+
 /* ============ BATCH ACTION BUTTONS ============ */
 .btn-edit-batch-margin {
   background: #FF9800;
@@ -641,6 +714,24 @@
   .filter-group-by-product,
   .filter-group-by-batch {
     flex-direction: column;
+  }
+
+  .product-filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .product-filter-row-ranges {
+    flex-wrap: wrap;
+  }
+
+  .product-filter-row-actions {
+    justify-content: flex-start;
+  }
+
+  .filter-range-group,
+  .filter-range-inputs {
+    width: 100%;
   }
 
   .filter-field input,

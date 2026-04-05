@@ -608,11 +608,6 @@ var js = function () {
                             <span class="error-message name hidden"></span>
                         </div>
                         <div class="flex">
-                            <label for="price">Giá sản phẩm</label>
-                            <input id="price" class="priceClass" type="text" add-index="3" placeholder="Giá sản phẩm">
-                            <span class="error-message price hidden"></span>
-                        </div>
-                        <div class="flex">
                             <label for="publisher_id">Nhà xuất bản</label>
                             <select id="publisher_id">
                             </select>
@@ -713,7 +708,6 @@ var js = function () {
                 name: modal.querySelector("#name").value,
                 publisher_id: modal.querySelector("#publisher_id").value,
                 image: document.getElementById("imagePreview").src,
-                price: modal.querySelector("#price").value,
                 supplier_id: modal.querySelector("#supplier_id").value,
                 category: multiselect_array["category"],
                 author: multiselect_array["author"],
@@ -1018,9 +1012,6 @@ var js = function () {
       modal.innerHTML = modal_html;
       modal.querySelector("#name").value =
         this.parentNode.parentNode.querySelector(".name").innerHTML;
-      modal.querySelector("#price").value = this.parentNode.parentNode
-        .querySelector(".price")
-        .innerHTML.replace(/[₫.]+/g, "");
       modal.querySelector("#modal-header").innerHTML =
         "Sửa sản phẩm mã " +
         this.parentNode.parentNode.querySelector(".id").innerHTML;
@@ -1258,7 +1249,6 @@ var js = function () {
                 publisher_id: modal.querySelector("#publisher_id").value,
                 supplier_id: modal.querySelector("#supplier_id").value,
                 image: image,
-                price: modal.querySelector("#price").value,
                 category: multiselect_array["category"].concat(
                   multiselect_array["category_hidden"]
                 ),
@@ -1359,29 +1349,23 @@ var js = function () {
   function checkInput() {
     var success = true;
 
-    const price_regex = /^[0-9]+$/;
-
     const fileinput = modal.querySelector("#fileInput");
     const name = modal.querySelector("#name");
-    const price = modal.querySelector("#price");
     const publisher = modal.querySelector("#publisher_id");
     const supplier = modal.querySelector("#supplier_id");
 
     fileinput.classList.remove("error-field");
     name.classList.remove("error-field");
-    price.classList.remove("error-field");
     publisher.classList.remove("error-field");
     supplier.classList.remove("error-field");
 
     const fileinput_err = modal.querySelector(".error-message.fileInput");
     const name_err = modal.querySelector(".error-message.name");
-    const price_err = modal.querySelector(".error-message.price");
     const publisher_err = modal.querySelector(".error-message.publisher_id");
     const supplier_err = modal.querySelector(".error-message.supplier_id");
 
     fileinput_err.classList.add("hidden");
     name_err.classList.add("hidden");
-    price_err.classList.add("hidden");
     publisher_err.classList.add("hidden");
     supplier_err.classList.add("hidden");
 
@@ -1396,17 +1380,6 @@ var js = function () {
       name.classList.add("error-field");
       name_err.classList.remove("hidden");
       name_err.innerHTML = "Không được để trống";
-      success = false;
-    }
-    console.log(typeof price.value);
-    if (price.value.trim().length == 0) {
-      price.classList.add("error-field");
-      price_err.classList.remove("hidden");
-      price_err.innerHTML = "Không được để trống";
-      success = false;
-    } else if (!price_regex.test(price.value) || parseFloat(price.value) <= 0) {
-      price_err.classList.remove("hidden");
-      price_err.innerHTML = "Giá phải là số dương";
       success = false;
     }
     if (publisher.value == "") {

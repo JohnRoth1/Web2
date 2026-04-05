@@ -9,7 +9,7 @@ function getProductDetailByIdModel($product_id, $closeDatabase = false)
             p.name AS product_name, 
             p.image_path, 
             p.quantity, 
-            p.price, 
+          (COALESCE(p.price, 0) * (1 + COALESCE(p.profit_margin, 0))) AS price, 
             p.status,
             CASE WHEN pub.status = 1 THEN pub.name ELSE NULL END AS publisher_name,
             -- GROUP_CONCAT(CASE WHEN c.status = 1 THEN CONCAT(' ', c.name) ELSE NULL END) AS category_names,

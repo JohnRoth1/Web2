@@ -286,11 +286,12 @@ class pagnation
                             echo  money_format($row['total_price']) . '</td>';
                             echo '<td class="date_create">' . $row['date_create'] . '</td>';
                             $receiptStatus = isset($row['status']) ? $row['status'] : 'draft';
-                            $statusLabel = $receiptStatus === 'completed' ? 'Hoàn thành' : 'Nháp';
+                            $statusLabel = $receiptStatus === 'completed' ? 'Hoàn thành' : 'Chưa hoàn thành';
                             echo '<td class="receipt_status" data-status="' . $receiptStatus . '">' . $statusLabel . '</td>';
 
                             echo '<td class="actions">
                                     <button class="actions--edit">Xem/Sửa</button>
+                                    <button class="actions--delete" ' . ($receiptStatus === 'completed' ? 'disabled' : '') . '>Xoá</button>
                                     <button class="actions--complete" ' . ($receiptStatus === 'completed' ? 'disabled' : '') . '>Hoàn thành</button>
                                 </td>
                             </tr>';
@@ -1149,12 +1150,15 @@ function getOrderFilterSQL($data)
 
 function money_format($money)
 {
-    if ($money == 0)  return  "0&#8363;";
-    $formated = "";
-    while ($money > 0) {
-        $formated = substr("$money", -3, 3) . '.' . $formated;
-        $money = substr("$money", 0, -3);
+    $amount = is_numeric($money) ? (float)$money : 0;
+    $amount = (int) round($amount);
+
+    if ($amount === 0) {
+        return "0&#8363;";
     }
 
-    return  trim($formated, '. ') . "&#8363;";
+    $sign = $amount < 0 ? '-' : '';
+    $absAmount = abs($amount);
+
+    return $sign . number_format($absAmount, 0, ',', '.') . "&#8363;";
 }

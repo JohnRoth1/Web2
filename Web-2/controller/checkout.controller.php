@@ -4,6 +4,63 @@
   include_once("../model/product_detail.model.php");
   include_once("../model/order.model.php");
   include_once("../model/order_detail.model.php");
+  include_once("../model/delivery_info.model.php");
+
+  function getCheckoutPaymentMethodLabel($paymentMethod)
+  {
+    switch ($paymentMethod) {
+      case 'bank_transfer':
+        return 'Chuyển khoản ngân hàng';
+      case 'online':
+        return 'Thanh toán trực tuyến';
+      default:
+        return 'Thanh toán tiền mặt khi nhận hàng';
+    }
+  }
+
+  function buildCheckoutOrderSummary($orderId, $deliveryInfoId, $cartSelected, $discountCode, $totalPrice, $paymentMethod)
+  {
+    $deliveryInfo = getDetailDeliveryInfoById($deliveryInfoId);
+    $deliveryInfo = $deliveryInfo ? $deliveryInfo->fetch_assoc() : null;
+
+    $items = [];
+    $subtotal = 0;
+    foreach ($cartSelected as $product) {
+      $productDetail = getProductDetailByIdModel($product['productId']);
+      if (!$productDetail) {
+        continue;
+      }
+
+      $productDetail = $productDetail->fetch_assoc();
+      $unitPrice = isset($productDetail['price']) ? (int)$productDetail['price'] : 0;
+      $quantity = isset($product['amount']) ? (int)$product['amount'] : 0;
+      $lineTotal = $unitPrice * $quantity;
+      $subtotal += $lineTotal;
+
+      $items[] = [
+        'product_id' => $product['productId'],
+        'product_name' => $productDetail['product_name'],
+        'image_path' => $productDetail['image_path'],
+        'quantity' => $quantity,
+        'price' => $unitPrice,
+        'line_total' => $lineTotal,
+      ];
+    }
+
+    $discountValue = max(0, $subtotal - (int)$totalPrice);
+
+    return [
+      'order_id' => $orderId,
+      'created_at' => date('Y-m-d H:i:s'),
+      'payment_method' => getCheckoutPaymentMethodLabel($paymentMethod),
+      'discount_code' => $discountCode === 'null' ? null : trim($discountCode, "'"),
+      'subtotal' => $subtotal,
+      'discount_value' => $discountValue,
+      'total_price' => (int)$totalPrice,
+      'delivery_info' => $deliveryInfo,
+      'items' => $items,
+    ];
+  }
 
   if (isset($_POST['isCheckout']) && $_POST['isCheckout']) {
     $cartSelected = $_SESSION['cart-selected'];
@@ -40,6 +97,7 @@
       $deliveryInfoId = $_POST['deliveryInfoId'];
       $customerId = $_SESSION['username'];
       $totalPrice = $_POST['totalPrice'];
+      $paymentMethod = isset($_POST['paymentMethod']) ? $_POST['paymentMethod'] : 'cod';
       $discountCode = "'".$_POST['discountCode']."'";
       
       if ($discountCode == "''") {
@@ -56,6 +114,15 @@
           }
         }
 
+        $orderSummary = buildCheckoutOrderSummary(
+          $orderId,
+          $deliveryInfoId,
+          $cartSelected,
+          $discountCode,
+          $totalPrice,
+          $paymentMethod
+        );
+
         // Xoá những `id` có trong cart vì đã xác nhận thanh toán
         foreach ($_SESSION['cart-selected'] as $item) {
           $productId = $item['productId'];
@@ -68,7 +135,8 @@
 
         $response = [
           'successAddNewOrder' => true,
-          'message' => "Hệ thống đã thêm đơn hàng thành công!"
+          'message' => "Đặt hàng thành công!",
+          'orderSummary' => $orderSummary
         ];
         echo json_encode($response);
       } else {

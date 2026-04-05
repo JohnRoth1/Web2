@@ -145,46 +145,16 @@ function renderSiderBars(data) {
       fncid: 1,
     },
     {
-      page: "product",
-      name: "Sản phẩm",
-      icon: "fa-book",
-      fncid: 2,
-    },
-    {
       page: "order",
       name: "Đơn hàng",
       icon: "fa-cart-shopping",
       fncid: 3,
     },
     {
-      page: "account",
-      name: "Thành viên",
-      icon: "fa-user",
-      fncid: 4,
-    },
-    {
-      page: "publisher",
-      name: "Nhà xuất bản",
-      icon: "fa-upload",
-      fncid: 5,
-    },
-    {
-      page: "author",
-      name: "Tác giả",
-      icon: "fa-book-open-reader",
-      fncid: 6,
-    },
-    {
-      page: "category",
-      name: "Thể loại sách",
-      icon: "fa-list",
-      fncid: 7,
-    },
-    {
-      page: "supplier",
-      name: "Nhà cung cấp",
-      icon: "fa-industry",
-      fncid: 8,
+      page: "product",
+      name: "Sản phẩm",
+      icon: "fa-book",
+      fncid: 2,
     },
     {
       page: "receipt",
@@ -205,9 +175,39 @@ function renderSiderBars(data) {
       fncid: 12,
     },
     {
+      page: "supplier",
+      name: "Nhà cung cấp",
+      icon: "fa-industry",
+      fncid: 8,
+    },
+    {
+      page: "category",
+      name: "Thể loại sách",
+      icon: "fa-list",
+      fncid: 7,
+    },
+    {
+      page: "author",
+      name: "Tác giả",
+      icon: "fa-book-open-reader",
+      fncid: 6,
+    },
+    {
+      page: "publisher",
+      name: "Nhà xuất bản",
+      icon: "fa-upload",
+      fncid: 5,
+    },
+    {
+      page: "account",
+      name: "Thành viên",
+      icon: "fa-user",
+      fncid: 4,
+    },
+    {
       page: "discount",
       name: "Khuyến mãi",
-      icon: "fa-tag",
+      icon: "fa-percent",
       fncid: 10,
     },
   ];
@@ -271,7 +271,7 @@ function updateData4Boxes(data) {
   const sanpham = document.querySelector(".sanpham");
   const thanhvien = document.querySelector(".thanhvien");
 
-  const totalIncome = +data.totalIncome;
+  const totalIncome = Math.round(+data.totalIncome);
   const formattedTotalIncome = totalIncome.toLocaleString("vi-VN");
 
   thunhap.innerHTML = formattedTotalIncome + " đ";

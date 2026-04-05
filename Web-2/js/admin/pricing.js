@@ -1,10 +1,12 @@
 let allProducts = [];
 let currentProductId = null;
-let currentProductInputPrice = null;
 let currentProductAverageCostPrice = null;
 let currentView = 'byProduct'; // byProduct or byBatch
-let currentPage = 1;
-let totalPages = 1;
+let currentProductPage = 1;
+let totalProductPages = 1;
+const productsPerPage = 10;
+let currentBatchPage = 1;
+let totalBatchPages = 1;
 let allBatches = [];
 let currentBatchSearch = '';
 let currentBatchId = null;
@@ -38,14 +40,27 @@ function initializeEventListeners() {
   });
 
   // Product view: Search
-  $("#searchProduct").on("input", function () {
-    filterProducts();
+  $("#searchProduct, #marginMin, #marginMax").on("input", function () {
+    currentProductPage = 1;
+    applyProductFilterAndRender();
+  });
+
+  $("#costPriceMin, #costPriceMax, #sellingPriceMin, #sellingPriceMax").on("input", function () {
+    formatPriceFilterInput($(this));
+    currentProductPage = 1;
+    applyProductFilterAndRender();
+  });
+
+  $("#btnResetProductFilters").click(function () {
+    $("#searchProduct, #costPriceMin, #costPriceMax, #sellingPriceMin, #sellingPriceMax, #marginMin, #marginMax").val("");
+    currentProductPage = 1;
+    applyProductFilterAndRender();
   });
 
   // Batch view: Search
   $("#btnSearchBatch").click(function () {
     currentBatchSearch = $("#searchBatch").val();
-    currentPage = 1;
+    currentBatchPage = 1;
     loadReceipts();
   });
 
@@ -54,42 +69,6 @@ function initializeEventListeners() {
     if (e.which === 13) {
       $("#btnSearchBatch").click();
     }
-  });
-
-  // Save direct price
-  $("#btnSavePrice").click(function () {
-    const newPrice = $("#newPrice").val();
-    if (!newPrice || newPrice <= 0) {
-      alert("Vui lòng nhập giá hợp lệ!");
-      return;
-    }
-    
-    console.log("Saving price for product:", currentProductId);
-    $.ajax({
-      url: "../controller/admin/pricing.controller.php",
-      type: "POST",
-      dataType: "json",
-      data: {
-        function: "updatePrice",
-        product_id: currentProductId,
-        price: newPrice
-      }
-    }).done(function (result) {
-      if (result.success) {
-        alert("Cập nhật giá thành công!");
-        $("#directPriceModal").removeClass("active");
-        loadProducts();
-      } else {
-        alert("Cập nhật giá thất bại!");
-      }
-    }).fail(function () {
-      alert("Lỗi khi cập nhật giá!");
-    });
-  });
-
-  // Cancel direct price
-  $("#btnCancelPrice").click(function () {
-    $("#directPriceModal").removeClass("active");
   });
 
   // Save margin
@@ -189,22 +168,42 @@ function initializeEventListeners() {
 
   // Batch view - Pagination
   $(document).on("click", "#batchPrevBtn", function () {
-    if (currentPage > 1) {
-      currentPage--;
+    if (currentBatchPage > 1) {
+      currentBatchPage--;
       loadReceipts();
     }
   });
 
   $(document).on("click", "#batchNextBtn", function () {
-    if (currentPage < totalPages) {
-      currentPage++;
+    if (currentBatchPage < totalBatchPages) {
+      currentBatchPage++;
       loadReceipts();
     }
   });
 
   $(document).on("click", ".batch-page-btn", function () {
-    currentPage = parseInt($(this).data("page"));
+    currentBatchPage = parseInt($(this).data("page"), 10);
     loadReceipts();
+  });
+
+  // Product view - Pagination
+  $(document).on("click", "#productPrevBtn", function () {
+    if (currentProductPage > 1) {
+      currentProductPage--;
+      applyProductFilterAndRender();
+    }
+  });
+
+  $(document).on("click", "#productNextBtn", function () {
+    if (currentProductPage < totalProductPages) {
+      currentProductPage++;
+      applyProductFilterAndRender();
+    }
+  });
+
+  $(document).on("click", ".product-page-btn", function () {
+    currentProductPage = parseInt($(this).data("page"), 10);
+    applyProductFilterAndRender();
   });
 
   // Batch view - View details button
@@ -269,11 +268,11 @@ function initializeEventListeners() {
 
 function switchView(view) {
   currentView = view;
-  currentPage = 1;
 
   // Update subtab buttons
   $(".subtab-btn").removeClass("active");
   if (view === 'byProduct') {
+    currentProductPage = 1;
     $("#tabByProduct").addClass("active");
     $("#filterByProduct").show();
     $("#filterByBatch").hide();
@@ -281,6 +280,7 @@ function switchView(view) {
     $("#viewByBatch").hide();
     loadProducts();
   } else {
+    currentBatchPage = 1;
     $("#tabByBatch").addClass("active");
     $("#filterByProduct").hide();
     $("#filterByBatch").show();
@@ -301,7 +301,8 @@ function loadProducts() {
     }
   }).done(function (result) {
     allProducts = result;
-    displayProducts(result);
+    currentProductPage = 1;
+    applyProductFilterAndRender();
     console.log("Products loaded:", result);
   }).fail(function (jqXHR, textStatus, errorThrown) {
     console.error("AJAX Error Details:", {
@@ -316,26 +317,68 @@ function loadProducts() {
   });
 }
 
+function applyProductFilterAndRender() {
+  const searchTerm = $("#searchProduct").val().toLowerCase().trim();
+  const costPriceMin = getNumericFilterValue("#costPriceMin");
+  const costPriceMax = getNumericFilterValue("#costPriceMax");
+  const sellingPriceMin = getNumericFilterValue("#sellingPriceMin");
+  const sellingPriceMax = getNumericFilterValue("#sellingPriceMax");
+  const marginMin = getNumericFilterValue("#marginMin");
+  const marginMax = getNumericFilterValue("#marginMax");
+
+  const filtered = allProducts.filter(product => {
+    const idMatch = product.id.toString().includes(searchTerm);
+    const nameMatch = product.name.toLowerCase().includes(searchTerm);
+    const supplierMatch = product.supplier_name.toLowerCase().includes(searchTerm);
+    const averageCostPrice = parseFloat(product.average_cost_price) || 0;
+    const marginRatio = parseFloat(product.profit_margin) || 0;
+    const marginPercent = marginRatio * 100;
+    const sellingPrice = averageCostPrice * (1 + marginRatio);
+    const matchesSearch = idMatch || nameMatch || supplierMatch;
+
+    return matchesSearch
+      && matchesMinMaxRange(averageCostPrice, costPriceMin, costPriceMax)
+      && matchesMinMaxRange(sellingPrice, sellingPriceMin, sellingPriceMax)
+      && matchesMinMaxRange(marginPercent, marginMin, marginMax);
+  });
+
+  const totalItems = filtered.length;
+  totalProductPages = totalItems > 0 ? Math.ceil(totalItems / productsPerPage) : 1;
+
+  if (currentProductPage > totalProductPages) {
+    currentProductPage = totalProductPages;
+  }
+
+  const startIndex = (currentProductPage - 1) * productsPerPage;
+  const paginatedProducts = filtered.slice(startIndex, startIndex + productsPerPage);
+
+  displayProducts(paginatedProducts);
+  updateProductPagination(totalItems);
+}
+
 function displayProducts(products) {
   const tbody = $("#pricingTableBody");
   tbody.empty();
   
   if (products.length === 0) {
-    tbody.append("<tr><td colspan='5' class='text-center'>Không có sản phẩm</td></tr>");
+    tbody.append("<tr><td colspan='7' class='text-center'>Không có sản phẩm</td></tr>");
     return;
   }
 
   products.forEach(function (product) {
+    const costPrice = parseFloat(product.average_cost_price) || 0;
+    const marginRatio = parseFloat(product.profit_margin) || 0;
+    const marginPercent = marginRatio * 100;
+    const sellingPrice = costPrice * (1 + marginRatio);
     const html = `
       <tr>
         <td>${product.id}</td>
         <td>${product.name}</td>
         <td>${product.supplier_name}</td>
-        <td class="price-column">${formatPrice(product.price)}</td>
+        <td class="price-column">${costPrice > 0 ? formatPrice(costPrice) : '-'}</td>
+        <td class="price-column">${costPrice > 0 ? formatPrice(sellingPrice) : '-'}</td>
+        <td>${formatPercent(marginPercent)}</td>
         <td>
-          <button class="btn-action btn-edit-price" onclick="openDirectPriceModal(${product.id}, '${product.name}', ${product.price})">
-            <i class="fas fa-tag"></i> Nhập giá
-          </button>
           <button class="btn-action btn-edit-margin" onclick="openMarginModal(${product.id}, '${product.name}')">
             <i class="fas fa-percent"></i> % Lợi nhuận
           </button>
@@ -347,32 +390,100 @@ function displayProducts(products) {
 }
 
 function filterProducts() {
-  const searchTerm = $("#searchProduct").val().toLowerCase();
-  
-  const filtered = allProducts.filter(product => {
-    const idMatch = product.id.toString().includes(searchTerm);
-    const nameMatch = product.name.toLowerCase().includes(searchTerm);
-    const supplierMatch = product.supplier_name.toLowerCase().includes(searchTerm);
-    
-    return idMatch || nameMatch || supplierMatch;
-  });
-  
-  displayProducts(filtered);
+  currentProductPage = 1;
+  applyProductFilterAndRender();
 }
 
-function openDirectPriceModal(productId, productName, currentPrice) {
-  currentProductId = productId;
-  $("#modalProductName").text(productName);
-  $("#modalCurrentPrice").text(formatPrice(currentPrice));
-  $("#newPrice").val(currentPrice);
-  $("#directPriceModal").addClass("active");
-  setTimeout(() => $("#newPrice").focus(), 100);
+function getNumericFilterValue(selector) {
+  const element = $(selector);
+  const value = element.val();
+  if (value === "" || value === null || typeof value === "undefined") {
+    return null;
+  }
+
+  const normalizedValue = element.hasClass("price-filter-input")
+    ? normalizeCurrencyString(value)
+    : normalizeDecimalString(value);
+
+  const parsedValue = parseFloat(normalizedValue);
+  return Number.isNaN(parsedValue) ? null : parsedValue;
+}
+
+function matchesMinMaxRange(value, minValue, maxValue) {
+  if (minValue !== null && value < minValue) {
+    return false;
+  }
+
+  if (maxValue !== null && value > maxValue) {
+    return false;
+  }
+
+  return true;
+}
+
+function normalizeDecimalString(value) {
+  return value.toString().replace(/[^0-9.-]/g, "");
+}
+
+function normalizeCurrencyString(value) {
+  return value.toString().replace(/\D/g, "");
+}
+
+function formatPriceFilterInput(element) {
+  const rawValue = normalizeCurrencyString(element.val());
+
+  if (!rawValue) {
+    element.val("");
+    return;
+  }
+
+  const numericValue = parseInt(rawValue, 10);
+  if (Number.isNaN(numericValue)) {
+    element.val("");
+    return;
+  }
+
+  element.val(new Intl.NumberFormat('vi-VN').format(numericValue));
+}
+
+function updateProductPagination(totalItems) {
+  if (totalItems <= productsPerPage) {
+    $("#productPaginationContainer").hide();
+    return;
+  }
+
+  $("#productPaginationContainer").show();
+
+  const start = (currentProductPage - 1) * productsPerPage + 1;
+  const end = Math.min(currentProductPage * productsPerPage, totalItems);
+
+  $("#productPageInfo").text(`${start}-${end}`);
+  $("#productTotalInfo").text(totalItems);
+
+  $("#productPrevBtn").prop("disabled", currentProductPage === 1);
+  $("#productNextBtn").prop("disabled", currentProductPage === totalProductPages);
+
+  let pageNumbers = "";
+  const maxPages = 5;
+  let startPage = Math.max(1, currentProductPage - 2);
+  let endPage = Math.min(totalProductPages, startPage + maxPages - 1);
+
+  if (endPage - startPage < maxPages - 1) {
+    startPage = Math.max(1, endPage - maxPages + 1);
+  }
+
+  for (let i = startPage; i <= endPage; i++) {
+    const activeClass = i === currentProductPage ? "active" : "";
+    pageNumbers += `<button class="product-page-btn ${activeClass}" data-page="${i}">${i}</button>`;
+  }
+
+  $("#productPageNumbers").html(pageNumbers);
 }
 
 function openMarginModal(productId, productName) {
   currentProductId = productId;
   const currentProduct = allProducts.find(p => parseInt(p.id, 10) === parseInt(productId, 10));
-  const currentMargin = currentProduct ? (parseFloat(currentProduct.profit_margin) || 0) : 0;
+  const currentMargin = currentProduct ? ((parseFloat(currentProduct.profit_margin) || 0) * 100) : 0;
   
   // Fetch average cost price from server
   $.ajax({
@@ -424,7 +535,7 @@ function calculateMarginPrice() {
 // ============ BATCH VIEW FUNCTIONS ============
 
 function loadReceipts() {
-  console.log("Loading receipts. Page:", currentPage, "Search:", currentBatchSearch);
+  console.log("Loading receipts. Page:", currentBatchPage, "Search:", currentBatchSearch);
   
   $.ajax({
     url: "../controller/admin/pricing.controller.php",
@@ -433,7 +544,7 @@ function loadReceipts() {
     data: {
       function: "getReceipts",
       search: currentBatchSearch,
-      page: currentPage
+      page: currentBatchPage
     }
   }).done(function (result) {
     console.log("Receipts loaded:", result);
@@ -478,7 +589,7 @@ function updateBatchPagination(result) {
   const page = result.currentPage;
   const perPage = result.perPage;
 
-  totalPages = pages;
+  totalBatchPages = pages;
 
   if (pages <= 1) {
     $("#batchPaginationContainer").hide();
@@ -616,4 +727,13 @@ function formatPrice(price) {
     style: 'currency',
     currency: 'VND'
   }).format(price);
+}
+
+function formatPercent(value) {
+  if (!Number.isFinite(value)) {
+    return '-';
+  }
+
+  const roundedValue = Number(value.toFixed(2));
+  return `${roundedValue}%`;
 }

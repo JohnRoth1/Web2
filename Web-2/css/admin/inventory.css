@@ -309,46 +309,46 @@
 }
 
 /* Pagination Section */
-.pagination-section {
+.pagination-container {
   margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #ddd;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
 }
 
 .pagination-info {
-  margin-bottom: 15px;
-  font-size: 14px;
   color: #666;
-  text-align: right;
+  font-size: 13px;
+  min-width: 200px;
 }
 
-.pagination-controls {
+.pagination-buttons {
   display: flex;
+  gap: 5px;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
   flex-wrap: wrap;
 }
 
 .btn-pagination {
-  padding: 8px 12px;
+  padding: 6px 12px;
+  background: white;
   border: 1px solid #ddd;
   border-radius: 4px;
-  background-color: white;
-  color: #333;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 500;
-  transition: all 0.3s ease;
+  transition: all 0.3s;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 
 .btn-pagination:hover:not(:disabled) {
-  background-color: #0077B6;
-  color: white;
-  border-color: #0077B6;
+  border-color: #4CAF50;
+  color: #4CAF50;
 }
 
 .btn-pagination:disabled {
@@ -356,36 +356,36 @@
   cursor: not-allowed;
 }
 
-.pagination-numbers {
+.page-numbers {
   display: flex;
   align-items: center;
   gap: 5px;
 }
 
-.pagination-number {
-  padding: 6px 10px;
+.inventory-page-btn,
+.inventory-range-page-btn {
+  padding: 4px 8px;
+  background: white;
   border: 1px solid #ddd;
   border-radius: 4px;
-  background-color: white;
-  color: #333;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.3s ease;
+  font-size: 12px;
+  transition: all 0.3s;
   min-width: 30px;
   text-align: center;
 }
 
-.pagination-number:hover {
-  background-color: #e8f4f8;
-  border-color: #0077B6;
-  color: #0077B6;
+.inventory-page-btn:hover,
+.inventory-range-page-btn:hover {
+  border-color: #4CAF50;
+  color: #4CAF50;
 }
 
-.pagination-number.active {
-  background-color: #0077B6;
+.inventory-page-btn.active,
+.inventory-range-page-btn.active {
+  background: #4CAF50;
   color: white;
-  border-color: #0077B6;
+  border-color: #4CAF50;
 }
 
 .pagination-dots {
@@ -396,18 +396,14 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-  .pagination-controls {
+  .pagination-container {
     flex-direction: column;
-    gap: 15px;
+    align-items: flex-start;
   }
 
-  .pagination-numbers {
-    flex-wrap: wrap;
+  .pagination-buttons {
+    width: 100%;
     justify-content: center;
-  }
-
-  .pagination-info {
-    text-align: center;
   }
 }
 
@@ -556,6 +552,12 @@
   background-color: #d4edda;
   color: #155724;
   border: 1px solid #c3e6cb;
+}
+
+.status-badge.status-low-stock {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
 }
 
 .status-badge.status-out-stock {

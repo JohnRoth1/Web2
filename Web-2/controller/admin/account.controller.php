@@ -10,6 +10,9 @@ if (isset($_POST['function'])) {
     case 'password':
       changePass();
       break;
+    case 'resetPasswordDefault':
+      resetPasswordDefault();
+      break;
     case 'create':
       createAccount();
       break;
@@ -18,6 +21,12 @@ if (isset($_POST['function'])) {
 function changePass() {
   if(isset($_POST['field'])) {
     echo passEdit($_POST['field']);
+  }
+}
+
+function resetPasswordDefault() {
+  if (isset($_POST['field']) && isset($_POST['field']['username'])) {
+    echo passResetDefault($_POST['field']);
   }
 }
 function editAccount()

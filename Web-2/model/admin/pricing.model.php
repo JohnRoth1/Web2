@@ -5,38 +5,16 @@ function pricing_getAverageCostPrice($product_id)
 {
   $database = new connectDB();
   $product_id = mysqli_real_escape_string($database->conn, $product_id);
-  
-  // Lấy tất cả phiếu nhập cho sản phẩm (sắp xếp theo ngày)
-  $sql = "
-    SELECT gd.quantity as input_quantity, gd.input_price, gr.date_create
-    FROM goodsreceipt_details gd
-    JOIN goodsreceipts gr ON gd.goodsreceipt_id = gr.id
-    WHERE gd.product_id = '$product_id'
-    ORDER BY gr.date_create ASC, gr.id ASC
-  ";
-  
+
+  $sql = "SELECT COALESCE(price, 0) as cost_price FROM products WHERE id = '$product_id' LIMIT 1";
   $result = $database->query($sql);
-  $totalQuantity = 0;
-  $totalCost = 0;
   $averagePrice = 0;
-  
-  error_log("pricing_getAverageCostPrice - Product ID: $product_id");
-  
+
   if ($result && mysqli_num_rows($result) > 0) {
-    while ($row = mysqli_fetch_assoc($result)) {
-      $inputQty = intval($row['input_quantity']);
-      $inputPrice = floatval($row['input_price']);
-      
-      // Công thức BÌNH QUÂN: (số lượng tồn × giá hiện tại + số lượng nhập × giá nhập mới) / (số lượng tồn + số lượng nhập)
-      $totalCost = ($totalQuantity * $averagePrice) + ($inputQty * $inputPrice);
-      $totalQuantity += $inputQty;
-      $averagePrice = $totalQuantity > 0 ? $totalCost / $totalQuantity : $inputPrice;
-      
-      error_log("  Step - Qty: $inputQty, Price: $inputPrice, Avg: $averagePrice");
-    }
+    $row = mysqli_fetch_assoc($result);
+    $averagePrice = floatval($row['cost_price']);
   }
-  
-  error_log("pricing_getAverageCostPrice - Final Average Price: $averagePrice");
+
   $database->close();
   return $averagePrice > 0 ? $averagePrice : 0;
 }
@@ -47,7 +25,14 @@ function pricing_getProducts()
   error_log("Pricing Model - Database connection: " . ($database->conn ? "Connected" : "Failed"));
   
   $sql = "
-    SELECT p.id, p.name, p.price, p.profit_margin, p.supplier_id, s.name as supplier_name
+    SELECT 
+      p.id,
+      p.name,
+      p.price,
+      p.profit_margin,
+      p.supplier_id,
+      s.name as supplier_name,
+      COALESCE(p.price, 0) as average_cost_price
     FROM products p
     JOIN suppliers s ON p.supplier_id = s.id
     WHERE p.status = 1
@@ -81,19 +66,9 @@ function pricing_updatePrice($product_id, $new_price)
   $new_price_val = floatval($new_price);
   $new_price = mysqli_real_escape_string($database->conn, strval($new_price_val));
 
-  // Chuẩn hóa logic: nếu có giá nhập bình quân thì suy ra margin tương ứng với giá mới
-  $avg_cost = pricing_getAverageCostPrice($product_id);
-  if ($avg_cost > 0) {
-    $derived_margin = (($new_price_val - $avg_cost) / $avg_cost) * 100;
-    $derived_margin_safe = mysqli_real_escape_string($database->conn, strval($derived_margin));
     $sql = "UPDATE products 
-            SET price = '$new_price', profit_margin = '$derived_margin_safe', update_date = '$date' 
-            WHERE id = '$product_id'";
-  } else {
-    $sql = "UPDATE products 
-            SET price = '$new_price', update_date = '$date' 
-            WHERE id = '$product_id'";
-  }
+      SET price = '$new_price', update_date = '$date' 
+      WHERE id = '$product_id'";
   
   $result = $database->execute($sql);
   $database->close();
@@ -109,6 +84,7 @@ function pricing_applyMargin($product_id, $margin_percent)
   
   $product_id = mysqli_real_escape_string($database->conn, $product_id);
   $margin_percent = floatval($margin_percent);
+  $margin_ratio = $margin_percent / 100;
   
   error_log("pricing_applyMargin - Product ID: $product_id, Margin: $margin_percent%");
   
@@ -118,14 +94,14 @@ function pricing_applyMargin($product_id, $margin_percent)
   if ($average_cost_price > 0) {
     // Tính giá bán: Giá nhập × (100% + tỷ lệ lợi nhuận)
     // VD: giá nhập 100, lợi nhuận 20% => giá bán = 100 × 1.2 = 120
-    $new_price = $average_cost_price * (1 + $margin_percent / 100);
+    $new_price = $average_cost_price * (1 + $margin_ratio);
     
     error_log("pricing_applyMargin - Cost: $average_cost_price, New Price: $new_price");
     
-    // Update giá bán và lưu % lợi nhuận (ghi đè)
-    $margin_percent_safe = mysqli_real_escape_string($database->conn, strval($margin_percent));
+    // Chỉ lưu tỷ lệ lợi nhuận trong DB. Giá bán được tính động từ giá vốn.
+    $margin_ratio_safe = mysqli_real_escape_string($database->conn, strval($margin_ratio));
     $sql_update = "UPDATE products 
-                   SET price = '$new_price', profit_margin = '$margin_percent_safe', update_date = '$date' 
+         SET profit_margin = '$margin_ratio_safe', update_date = '$date' 
                    WHERE id = '$product_id'";
     
     $update_result = $database->execute($sql_update);
@@ -151,6 +127,7 @@ function pricing_increaseProfitMarginAll($increase_percent)
   $date = date('Y-m-d', time());
 
   $increase = floatval($increase_percent);
+  $increase_ratio = $increase / 100;
   if ($increase < 0) {
     $database->close();
     return [
@@ -159,8 +136,8 @@ function pricing_increaseProfitMarginAll($increase_percent)
     ];
   }
 
-  // Lấy toàn bộ sản phẩm đang hoạt động
-  $sqlProducts = "SELECT id FROM products WHERE status = 1 ORDER BY id ASC";
+  // Lấy toàn bộ sản phẩm đang hoạt động cùng % lợi nhuận hiện tại
+  $sqlProducts = "SELECT id, profit_margin FROM products WHERE status = 1 ORDER BY id ASC";
   $result = $database->query($sqlProducts);
 
   if (!$result) {
@@ -178,19 +155,14 @@ function pricing_increaseProfitMarginAll($increase_percent)
 
   while ($row = mysqli_fetch_assoc($result)) {
     $product_id = $row['id'];
-    $average_cost_price = pricing_getAverageCostPrice($product_id);
-    if ($average_cost_price <= 0) {
-      $skippedNoCost++;
-      continue;
-    }
-    $new_price = $average_cost_price * (1 + ($increase / 100));
+    $current_margin = isset($row['profit_margin']) ? floatval($row['profit_margin']) : 0;
+    $new_margin = $current_margin + $increase_ratio;
 
     $product_id_safe = mysqli_real_escape_string($database->conn, $product_id);
-    $new_price_safe = mysqli_real_escape_string($database->conn, strval($new_price));
-    $increase_safe = mysqli_real_escape_string($database->conn, strval($increase));
+    $new_margin_safe = mysqli_real_escape_string($database->conn, strval($new_margin));
 
     $sql_update = "UPDATE products 
-                   SET price = '$new_price_safe', profit_margin = '$increase_safe', update_date = '$date' 
+                   SET profit_margin = '$new_margin_safe', update_date = '$date' 
                    WHERE id = '$product_id_safe'";
 
     $ok = $database->execute($sql_update);
@@ -320,24 +292,16 @@ function pricing_getBatchDetails($batch_id)
       p.name as product_name,
       grd.quantity as input_quantity,
       grd.input_price as cost_price,
-      CASE 
-        WHEN grd.input_price > 0 THEN ROUND(((p.price - grd.input_price) / grd.input_price) * 100, 2)
-        ELSE 0
-      END as margin_percent,
-      pricing_avg.avg_cost as average_cost_price,
-      p.price as batch_selling_price,
-      p.price as current_selling_price,
+      ROUND(COALESCE(p.profit_margin, 0) * 100, 2) as margin_percent,
+      p.price as average_cost_price,
+      (p.price * (1 + COALESCE(p.profit_margin, 0))) as batch_selling_price,
+      (p.price * (1 + COALESCE(p.profit_margin, 0))) as current_selling_price,
       s.name as supplier_name,
       DATE_FORMAT(gr.date_create, '%d/%m/%Y') as batch_date
     FROM goodsreceipt_details grd
     JOIN goodsreceipts gr ON grd.goodsreceipt_id = gr.id
     JOIN products p ON grd.product_id = p.id
     JOIN suppliers s ON p.supplier_id = s.id
-    LEFT JOIN (
-      SELECT x.product_id, SUM(x.quantity * x.input_price) / NULLIF(SUM(x.quantity), 0) as avg_cost
-      FROM goodsreceipt_details x
-      GROUP BY x.product_id
-    ) as pricing_avg ON pricing_avg.product_id = p.id
     WHERE grd.goodsreceipt_id = '$batch_id'
     ORDER BY p.id ASC
   ";

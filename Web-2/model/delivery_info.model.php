@@ -89,4 +89,48 @@
       return false;
     }
   }
+
+  function deleteUserInfoByIdModel($id, $username) {
+    $database = new connectDB();
+    if ($database->conn) {
+      $id = intval($id);
+      $username = mysqli_real_escape_string($database->conn, $username);
+
+      $sqlCheckOwner = "SELECT * FROM delivery_infoes WHERE user_info_id = $id AND user_id = '$username'";
+      $resultCheckOwner = $database->query($sqlCheckOwner);
+      if (!$resultCheckOwner || mysqli_num_rows($resultCheckOwner) === 0) {
+        $database->close();
+        return (object) array(
+          "success" => false,
+          "message" => "Địa chỉ không tồn tại hoặc không thuộc tài khoản của bạn"
+        );
+      }
+
+      $sqlCheckUsedOrder = "SELECT COUNT(*) AS total FROM orders WHERE delivery_info_id = $id";
+      $resultCheckUsedOrder = $database->query($sqlCheckUsedOrder);
+      $rowCheckUsedOrder = $resultCheckUsedOrder ? mysqli_fetch_assoc($resultCheckUsedOrder) : null;
+      if ($rowCheckUsedOrder && intval($rowCheckUsedOrder['total']) > 0) {
+        $database->close();
+        return (object) array(
+          "success" => false,
+          "message" => "Địa chỉ này đã được dùng trong đơn hàng nên không thể xóa"
+        );
+      }
+
+      $sqlDelete = "DELETE FROM delivery_infoes WHERE user_info_id = $id AND user_id = '$username'";
+      $resultDelete = $database->execute($sqlDelete);
+      $database->close();
+
+      return (object) array(
+        "success" => (bool)$resultDelete,
+        "message" => $resultDelete ? "Xóa địa chỉ thành công" : "Xóa địa chỉ thất bại"
+      );
+    } else {
+      $database->close();
+      return (object) array(
+        "success" => false,
+        "message" => "Không thể kết nối cơ sở dữ liệu"
+      );
+    }
+  }
 ?>

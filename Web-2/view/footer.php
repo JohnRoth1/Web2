@@ -145,10 +145,17 @@
             </div>
             <div class="thongtin">
               <h3>Tài khoản của tôi</h3>
-              <li>Đăng nhập/Tạo tài khoản mới</li>
-              <li>Thay đổi địa chỉ khách hàng</li>
-              <li>Chi tiết tài khoản</li>
-              <li>lịch sử mua hàng</li>
+              <li><a style="text-decoration: none" href="index.php?page=signup">Đăng nhập/Tạo tài khoản mới</a></li>
+              <li>
+                <a style="text-decoration: none" href="index.php?page=checkout&manageAddress=1">
+                  Thay đổi địa chỉ khách hàng
+                </a>
+              </li>
+              <?php if (isset($_SESSION['username'])) { ?>
+                <li><a style="text-decoration: none" href="index.php?page=order">Lịch sử mua hàng</a></li>
+              <?php } else { ?>
+                <li><a style="text-decoration: none" href="index.php?page=signup">Lịch sử mua hàng</a></li>
+              <?php } ?>
             </div>
           </div>
         </div>
@@ -159,15 +166,20 @@
     var searchInput = document.getElementById("searchInput");
     var notification = document.querySelector(".notification"); // Use querySelector instead of getElementById
 
-    // Add focus event to search input
-    searchInput.addEventListener("focus", function () {
-      notification.style.display = "flex";
+    if (!searchInput || !notification) {
+      // Header may be absent in some contexts; keep footer script safe.
+    } else {
 
-      // Close notification when clicking outside after a delay
-      setTimeout(function () {
-        document.addEventListener("click", clickOutsideHandler);
-      }, 0);
-    });
+      // Add focus event to search input
+      searchInput.addEventListener("focus", function () {
+        notification.style.display = "flex";
+
+        // Close notification when clicking outside after a delay
+        setTimeout(function () {
+          document.addEventListener("click", clickOutsideHandler);
+        }, 0);
+      });
+    }
 
     // Function to handle click outside
     function clickOutsideHandler(event) {

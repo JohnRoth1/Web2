@@ -48,6 +48,10 @@ $(document).ready(function () {
 const modal = document.querySelector(".modal");
 const overlayDetailOrder = document.querySelector(".overlayDetailOrder");
 
+function formatOrderMoney(value) {
+  return Math.round(parseFloat(value) || 0).toLocaleString("vi-VN");
+}
+
 // Hàm xử lý render chi tiết đơn hàng
 function renderHTMLDetailOrder(data) {
   modal.innerHTML = "";
@@ -57,9 +61,7 @@ function renderHTMLDetailOrder(data) {
   const month = formatDateCreate.getMonth() + 1;
   const year = formatDateCreate.getFullYear();
 
-  const forrmatTotalPrice = parseFloat(data.order.total_price).toLocaleString(
-    "vi-VN"
-  );
+  const forrmatTotalPrice = formatOrderMoney(data.order.total_price);
   const discountCode = data.order.discount_code;
   let messageTotalPrice = "";
   if (discountCode) {
@@ -94,7 +96,7 @@ function renderHTMLDetailOrder(data) {
         <tbody>`;
 
   data.orderDetails.forEach((orderDetail) => {
-    const forrmatPrice = parseFloat(orderDetail.price).toLocaleString("vi-VN");
+    const forrmatPrice = formatOrderMoney(orderDetail.price);
 
     html += `
       <tr>

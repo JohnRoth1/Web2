@@ -26,6 +26,9 @@ if (isset($_POST['function'])) {
     case 'update':
       updateReceipt();
       break;
+    case 'delete':
+      deleteReceipt();
+      break;
     case 'getById':
       getReceiptById();
       break;
@@ -74,6 +77,13 @@ function updateReceipt()
 {
   if (isset($_POST['field'])) {
     echo receipt_update($_POST['field']);
+  }
+}
+
+function deleteReceipt()
+{
+  if (isset($_POST['field'])) {
+    echo receipt_delete($_POST['field']);
   }
 }
 

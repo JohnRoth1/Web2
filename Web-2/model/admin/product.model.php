@@ -117,6 +117,10 @@ function product_getSuppliers()
 function product_create($field)
 {
   $database = new connectDB();
+  $price = 0;
+  if (isset($field['price']) && is_numeric($field['price'])) {
+    $price = max(0, floatval($field['price']));
+  }
   if ($field['id'] == 0) {
     $field['id'] = 1;
     $sql = "SELECT id FROM `products` ORDER BY id DESC LIMIT 1";
@@ -153,7 +157,7 @@ function product_create($field)
     // Sử dụng giá trị status từ dữ liệu gửi lên ($field['status'])
     $sql = "INSERT INTO products (id, name, publisher_id, image_path, create_date, update_date, price, quantity, supplier_id, status)
             VALUES ('" . $field['id'] . "', '" . $field['name'] . "', '" . $field['publisher_id'] . "', '" . $image_path .
-            "', '" . $date  . "', '" . $date  . "', '" . $field['price'] . "', '0','".$field['supplier_id']."','" . $field['status'] . "') ";
+          "', '" . $date  . "', '" . $date  . "', '" . $price . "', '0','".$field['supplier_id']."','" . $field['status'] . "') ";
     $result = $database->execute($sql);
     if ($result) {
       $result = "<span class='success'>Tạo sản phẩm thành công</span>";
@@ -188,7 +192,10 @@ function product_edit($field)
   $result = null;
   $result = $database->query($sql);
   $row = mysqli_fetch_array($result);
-  if ($row == null) return "<span class='failed'>Sản phẩm " . $row['id'] . " không tồn tại</span>";
+  if ($row == null) {
+    $database->close();
+    return "<span class='failed'>Sản phẩm " . $field['id'] . " không tồn tại</span>";
+  }
   $image_path = $row["image_path"];
   if ($field['image'] != "") {
     // xóa ảnh cũ

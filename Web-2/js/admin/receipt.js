@@ -676,9 +676,9 @@ const openModal = addHtml => {
         if (res && res.success && res.data && res.data.date_create) {
           document.getElementById("date_create").value = res.data.date_create;
           const st = res.data.status || rowStatus;
-          document.getElementById("receipt_status").value = st === "completed" ? "Hoàn thành" : "Nháp";
+          document.getElementById("receipt_status").value = st === "completed" ? "Hoàn thành" : "Chưa hoàn thành";
         } else {
-          document.getElementById("receipt_status").value = rowStatus === "completed" ? "Hoàn thành" : "Nháp";
+          document.getElementById("receipt_status").value = rowStatus === "completed" ? "Hoàn thành" : "Chưa hoàn thành";
         }
       });
 
@@ -697,7 +697,7 @@ const openModal = addHtml => {
         success: function (response) {
           Table.innerHTML = response;
 
-          // Chỉ cho phép chỉnh sửa khi phiếu còn nháp
+          // Chỉ cho phép chỉnh sửa khi phiếu chưa hoàn thành
           const rows = Table.querySelectorAll("tbody tr");
           if (!isCompleted) {
             rows.forEach(row => {
@@ -727,12 +727,12 @@ const openModal = addHtml => {
                 ? (parseInt(cells[3].textContent.trim().replace(/[^\d-]/g, "")) || 0)
                 : (parseInt(cells[3].querySelector(".edit-input-price").value) || 0);
               const lineTotal = qty * price;
-              cells[cells.length - 1].textContent = lineTotal.toLocaleString("vi-VN") + "₫";
+              cells[cells.length - 1].textContent = Math.round(lineTotal).toLocaleString("vi-VN") + "₫";
               totalPrice += lineTotal;
             }
           });
 
-          document.getElementById("total_price").value = totalPrice.toLocaleString('vi-VN');
+          document.getElementById("total_price").value = Math.round(totalPrice).toLocaleString('vi-VN');
 
           // Re-calc tổng tiền khi thay đổi input
           if (!isCompleted) {
@@ -746,11 +746,11 @@ const openModal = addHtml => {
                     const q = parseInt(c[2].querySelector(".edit-qty").value) || 0;
                     const p = parseInt(c[3].querySelector(".edit-input-price").value) || 0;
                     const t = q * p;
-                    c[c.length - 1].textContent = t.toLocaleString("vi-VN") + "₫";
+                    c[c.length - 1].textContent = Math.round(t).toLocaleString("vi-VN") + "₫";
                     nextTotal += t;
                   }
                 });
-                document.getElementById("total_price").value = nextTotal.toLocaleString("vi-VN");
+                document.getElementById("total_price").value = Math.round(nextTotal).toLocaleString("vi-VN");
               });
             });
           }
@@ -854,6 +854,43 @@ const openModal = addHtml => {
         loadItem();
       }).fail(function () {
         alert("Lỗi khi hoàn thành phiếu nhập.");
+      });
+    });
+  });
+
+  // Xóa phiếu nhập (chỉ áp dụng cho phiếu chưa hoàn thành)
+  var delete_btns = document.querySelectorAll(".actions--delete");
+  delete_btns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const row = this.closest("tr");
+      const id = row.querySelector(".id").innerHTML;
+      const status = row.querySelector(".receipt_status")?.getAttribute("data-status");
+
+      if (status === "completed") {
+        alert("Phiếu nhập đã hoàn thành, không thể xóa.");
+        return;
+      }
+
+      if (!confirm("Bạn có chắc muốn xóa phiếu nhập này?")) {
+        return;
+      }
+
+      $.ajax({
+        url: "../controller/admin/receipt.controller.php",
+        type: "post",
+        dataType: "html",
+        data: {
+          function: "delete",
+          field: { id: id }
+        }
+      }).done(function (resultText) {
+        $("#sqlresult").html(resultText);
+        setTimeout(() => {
+          $("#sqlresult").html("");
+        }, 3000);
+        loadItem();
+      }).fail(function () {
+        alert("Lỗi khi xóa phiếu nhập.");
       });
     });
   });

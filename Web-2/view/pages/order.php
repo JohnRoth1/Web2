@@ -39,104 +39,74 @@
               }
 
               $totalPriceOfOrder = 0;
+              $totalQuantityOfOrder = 0;
               $timestamp = strtotime($order['date_create']);
               $day = date('d', $timestamp);
               $month = date('m', $timestamp);
               $year = date('Y', $timestamp);
               
-              echo '
-                <div class="order">
-                  <input type="hidden" class="orderId" value="'.$order['id'].'"/>
-                  <div class="order-header">
-                    <div class="order-header-content">
-                      <div>Ngày tạo: <strong>'.$day.' tháng '.$month.', '.$year.'</strong></div>
-                      <div>Trạng thái đơn hàng: <strong>'.$order['order_status'].'</strong></div>
-                    </div>
-                  </div>
-                  <div class="order-title">
-                    <div class="order-title-content">
-                      <div class="title-img">Hình ảnh</div>
-                      <div class="title-info">Thông tin</div>
-                      <div class="title-totalprice">Thành tiền</div>
-                    </div>
-                  </div>';
-              
               $orderDetails = getAllOrderDetailByOrderId($order['id']);
-              $countOrderDetail = 0; 
+              $countOrderDetail = 0;
+              $productPreviewParts = [];
               foreach ($orderDetails as $orderDetail) {
                 $countOrderDetail++;
-                $formatPrice = number_format($orderDetail['price'], 0, ',', '.');
                 $totalPrice = $orderDetail['quantity'] * $orderDetail['price'];
                 $totalPriceOfOrder += $totalPrice;
-                $formatTotalPrice = number_format($totalPrice, 0, ',', '.');
-                
-                 //Chỉ in ra 3 cái
-                if ($countOrderDetail <= 3) {
-                  echo '              
-                  <div class="order-item-wrapper">
-                    <div class="order-item">
-                      <div class="img-product-order">
-                        <div class="product-image">
-                          <img
-                            src="'.$orderDetail['image_path'].'"
-                            alt="'.$orderDetail['product_name'].'"
-                          />
-                        </div>
-                      </div>
-                      <div class="info-product-order">
-                        <h2 class="product-name">'.$orderDetail['product_name'].'</h2>
-                        <div class="price-original">
-                          <div class="order-price">
-                            <div class="order-item-price">
-                              <div>
-                                <span class="price">Đơn giá: '.$formatPrice.' ₫</span>
-                              </div>
-                            </div>
-                            <span class="qty-order">Số lượng: '.$orderDetail['quantity'].'</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="number-product-order">
-                        <div class="order-total-price">
-                          <span class="order-price">
-                            <span class="price">'.$formatTotalPrice.' ₫</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>';
+                $totalQuantityOfOrder += $orderDetail['quantity'];
+
+                if ($countOrderDetail <= 2) {
+                  $productPreviewParts[] = $orderDetail['product_name'] . ' x' . $orderDetail['quantity'];
                 }
               }
   
               $formatTotalPriceOfOrder = number_format($totalPriceOfOrder, 0, ',', '.');
               $formatTotalPriceAfterDiscount = number_format($order['total_price'], 0, ',', '.');
+              $productSummary = implode(', ', $productPreviewParts);
+              if ($countOrderDetail > 2) {
+                $productSummary .= ' và ' . ($countOrderDetail - 2) . ' sản phẩm khác';
+              }
               if ($order['discount_code'] == null) {
                 echo '
-                  <div class="order-bottom">
-                    <div class="order-bottom-totalprice">
-                      <p>Tổng tiền:</p>
-                      <strong>'.$formatTotalPriceOfOrder.' đ</strong>
-                    </div>
-                    <div class="order-bottom-actions">
-                      <button class="btnXemChiTiet">Xem chi tiết</button>
-                      <button class="btnHuyDon '.$isHideCancelOrder.'">Huỷ đơn</button>
+                  <div class="order">
+                    <input type="hidden" class="orderId" value="'.$order['id'].'"/>
+                    <div class="order-summary-card">
+                      <div class="order-summary-top">
+                        <div class="order-summary-code">Mã đơn hàng <strong>#'.$order['id'].'</strong></div>
+                        <div class="order-summary-status">'.$order['order_status'].'</div>
+                      </div>
+                      <div class="order-summary-main">
+                        <div class="order-summary-products">'.$productSummary.'</div>
+                        <div class="order-summary-meta">Ngày đặt: '.$day.' tháng '.$month.', '.$year.' • '.$countOrderDetail.' loại sản phẩm • '.$totalQuantityOfOrder.' cuốn</div>
+                        <div class="order-summary-total">Tổng tiền: <strong>'.$formatTotalPriceOfOrder.' đ</strong></div>
+                      </div>
+                      <div class="order-bottom-actions">
+                        <button class="btnXemChiTiet">Xem chi tiết</button>
+                        <button class="btnHuyDon '.$isHideCancelOrder.'">Huỷ đơn</button>
+                      </div>
                     </div>
                   </div>
-                </div>';
+                ';
               } else {
                 echo '
-                  <div class="order-bottom">
-                    <div class="order-bottom-totalprice">
-                      <p>Tổng tiền:</p>
-                      <strong class="beforePrice">'.$formatTotalPriceOfOrder.' đ</strong>
-                      <strong>'.$formatTotalPriceAfterDiscount.' đ</strong>
-                    </div>
-                    <div class="order-bottom-actions">
-                      <button class="btnXemChiTiet">Xem chi tiết</button>
-                      <button class="btnHuyDon '.$isHideCancelOrder.'">Huỷ đơn</button>
+                  <div class="order">
+                    <input type="hidden" class="orderId" value="'.$order['id'].'"/>
+                    <div class="order-summary-card">
+                      <div class="order-summary-top">
+                        <div class="order-summary-code">Mã đơn hàng <strong>#'.$order['id'].'</strong></div>
+                        <div class="order-summary-status">'.$order['order_status'].'</div>
+                      </div>
+                      <div class="order-summary-main">
+                        <div class="order-summary-products">'.$productSummary.'</div>
+                        <div class="order-summary-meta">Ngày đặt: '.$day.' tháng '.$month.', '.$year.' • '.$countOrderDetail.' loại sản phẩm • '.$totalQuantityOfOrder.' cuốn</div>
+                        <div class="order-summary-total">Tổng tiền: <strong><span class="beforePrice">'.$formatTotalPriceOfOrder.' đ</span> '.$formatTotalPriceAfterDiscount.' đ</strong></div>
+                      </div>
+                      <div class="order-bottom-actions">
+                        <button class="btnXemChiTiet">Xem chi tiết</button>
+                        <button class="btnHuyDon '.$isHideCancelOrder.'">Huỷ đơn</button>
+                      </div>
                     </div>
                   </div>
-                </div>';
+                ';
               }
               
             }

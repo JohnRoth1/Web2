@@ -2,7 +2,8 @@
   if (isset($_GET['page']) && $_GET['page']) {
     $page = $_GET['page'];
     if ($page == 'checkout') {
-      if (!isset($_SESSION['cart-selected'])) {
+      $isManageAddressMode = isset($_GET['manageAddress']) && $_GET['manageAddress'] == '1';
+      if (!isset($_SESSION['cart-selected']) && !$isManageAddressMode) {
         header('Location: index.php');
       }
     }

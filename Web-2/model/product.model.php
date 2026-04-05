@@ -6,7 +6,7 @@
     if ($database->conn) {
       $sql = "SELECT p.id product_id,
                       p.name product_name, 
-                      p.price, 
+                      (COALESCE(p.price, 0) * (1 + COALESCE(p.profit_margin, 0))) AS price, 
                       p.image_path
               FROM category_details cd
               INNER JOIN products p ON p.id = cd.product_id
@@ -35,7 +35,7 @@
       p.name AS product_name, 
       p.image_path, 
       p.quantity, 
-      p.price, 
+        (COALESCE(p.price, 0) * (1 + COALESCE(p.profit_margin, 0))) AS price, 
       CASE WHEN c.status = 1 THEN CONCAT(' ', c.name) ELSE NULL END AS category_names
       FROM 
           products p  
@@ -90,10 +90,11 @@
   function getProductsByFilter($keyword, $listCategoryIds, $startRange, $endRange, $minPrice = null, $maxPrice = null, $itemsPerPage = null, $page = null) {
     $database = new connectDB();
     if ($database->conn) {
+      $sellingPriceExpr = "(COALESCE(p.price, 0) * (1 + COALESCE(p.profit_margin, 0)))";
       $escapedKeyword = mysqli_real_escape_string($database->conn, trim((string)$keyword));
       $sql = "SELECT DISTINCT p.id id,
                       p.name product_name, 
-                      p.price, 
+                      $sellingPriceExpr AS price, 
                       p.image_path,
                       p.quantity
               FROM products p
@@ -122,20 +123,20 @@
       if ($minPrice !== null && $maxPrice !== null) {
         $minPrice = intval($minPrice);
         $maxPrice = intval($maxPrice);
-        $sql .= " AND p.price BETWEEN $minPrice AND $maxPrice";
+        $sql .= " AND $sellingPriceExpr BETWEEN $minPrice AND $maxPrice";
       } else if ($minPrice !== null) {
         $minPrice = intval($minPrice);
-        $sql .= " AND p.price >= $minPrice";
+        $sql .= " AND $sellingPriceExpr >= $minPrice";
       } else if ($maxPrice !== null) {
         $maxPrice = intval($maxPrice);
-        $sql .= " AND p.price <= $maxPrice";
+        $sql .= " AND $sellingPriceExpr <= $maxPrice";
       } else if (($startRange == 0 || $startRange) && $endRange) {
-        $sql .= " AND price BETWEEN $startRange AND $endRange";
+        $sql .= " AND $sellingPriceExpr BETWEEN $startRange AND $endRange";
       }
 
       // Câu lệnh sắp theo thứ tự price/p.id
       if (count($listCategoryIds) > 0) {
-        $sql .= " ORDER BY price ASC";
+        $sql .= " ORDER BY $sellingPriceExpr ASC";
       } else {
         $sql .= " ORDER BY p.id ASC";
       }
@@ -226,14 +227,14 @@
   function getNewProductsModel($status) {
     $database = new connectDB();
     if ($database->conn) {
-      $sql = "SELECT * 
-              FROM products";
+      $sql = "SELECT p.*, (COALESCE(p.price, 0) * (1 + COALESCE(p.profit_margin, 0))) AS price
+              FROM products p";
            
       if ($status) {
-        $sql .= " WHERE status = $status";
+        $sql .= " WHERE p.status = $status";
       }
       
-      $sql .= " ORDER BY id DESC";
+      $sql .= " ORDER BY p.id DESC";
       $result = $database->query($sql);
       $database->close();
       return $result;

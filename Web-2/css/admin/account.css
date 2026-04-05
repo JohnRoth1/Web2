@@ -127,6 +127,12 @@ thead th:nth-child(4) {
   border-color: #28a745;
 }
 
+.resetPass {
+  color: #fff;
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
 .editAccountButton,
 .editFunctionButton {
   color: #000;

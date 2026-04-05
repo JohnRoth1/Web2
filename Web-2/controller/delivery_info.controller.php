@@ -22,6 +22,9 @@ if (isset($_POST['function'])) {
     case 'showCurrentDeliveryAddress':
       showCurrentDeliveryAddress();
       break;
+    case 'deleteUserInfo':
+      deleteUserInfo();
+      break;
   }
 }
 function getAllUserInfoByUserId($userId)
@@ -83,10 +86,30 @@ function renderAllUserInfoByUserId()
 function showCurrentDeliveryAddress()
 {
   $listUserInfo = getAllUserInfoByUserId($_SESSION['username']);
+  if (!is_array($listUserInfo) || count($listUserInfo) === 0) {
+    echo json_encode(null);
+    return;
+  }
+
+  $result = $listUserInfo[0];
   foreach ($listUserInfo as $key => $userInfo) {
     if ($key == $_POST['indexAddressRadioChecked']) {
       $result = $userInfo;
     }
   }
   echo json_encode($result);
+}
+
+function deleteUserInfo()
+{
+  if (isset($_SESSION['username'])) {
+    $userInfoId = isset($_POST['userInfoId']) ? $_POST['userInfoId'] : 0;
+    $result = deleteUserInfoByIdModel($userInfoId, $_SESSION['username']);
+    echo json_encode($result);
+  } else {
+    echo json_encode((object) array(
+      "success" => false,
+      "message" => "Phiên đăng nhập không tồn tại!"
+    ));
+  }
 }

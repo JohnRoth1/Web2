@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const parentEle = btn.closest(".cart-item");
     const price = +parentEle.querySelector(".price-hidden").value;
     const amount = +parentEle.querySelector(".qty-cart").value;
-    const totalPrice = price * amount;
+    const totalPrice = Math.round(price * amount);
     const formatPrice = totalPrice.toLocaleString("vi-VN", {
       style: "currency",
       currency: "VND",
@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const amount = +parentEle.querySelector(".qty-cart").value;
       totalPrice += price * amount;
     });
-    return totalPrice;
+    return Math.round(totalPrice);
   }
 
   // Update total price display

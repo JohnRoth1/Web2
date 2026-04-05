@@ -1,6 +1,8 @@
-<?
-    session_start();
-
+<?php
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    $isManageAddressOnly = isset($_GET['manageAddress']) && $_GET['manageAddress'] == '1';
 ?>
 
 <!DOCTYPE html>
@@ -15,7 +17,7 @@
     <link rel="stylesheet" href="assets/fontawesome-free-6.5.1-web/css/all.min.css?v=<?php echo time(); ?>">
 </head>
 
-<body>
+<body class="<?php echo $isManageAddressOnly ? 'manage-address-only' : ''; ?>">
     <div class="form-container">
         <form id="checkout-form" action="" method="post">
             <div class="container">
@@ -311,6 +313,38 @@
             </table>
         </div>
         <a href="index.php?page=cart">Đến giỏ hàng để thay đổi số lượng</a>
+        </div>
+    </div>
+    <div class="orderSuccessSummary-container hide">
+        <div class="orderSuccessSummary">
+            <div class="orderSuccessSummary-header">
+                <h2>Đặt hàng thành công</h2>
+            </div>
+            <div class="orderSuccessSummary-body">
+                <div class="orderSuccessSummary-overview">
+                    <div><span>Mã đơn hàng</span><strong class="summary-order-id"></strong></div>
+                    <div><span>Thời gian đặt</span><strong class="summary-created-at"></strong></div>
+                    <div><span>Thanh toán</span><strong class="summary-payment-method"></strong></div>
+                    <div><span>Tổng thanh toán</span><strong class="summary-total-price"></strong></div>
+                </div>
+                <div class="orderSuccessSummary-section">
+                    <h3>Thông tin nhận hàng</h3>
+                    <div class="summary-delivery-info"></div>
+                </div>
+                <div class="orderSuccessSummary-section">
+                    <h3>Sản phẩm đã đặt</h3>
+                    <div class="orderSuccessSummary-items"></div>
+                </div>
+                <div class="orderSuccessSummary-pricing">
+                    <div><span>Tạm tính</span><strong class="summary-subtotal"></strong></div>
+                    <div><span>Giảm giá</span><strong class="summary-discount-value"></strong></div>
+                    <div><span>Mã giảm giá</span><strong class="summary-discount-code"></strong></div>
+                </div>
+            </div>
+            <div class="orderSuccessSummary-actions">
+                <a href="index.php">Tiếp tục mua sắm</a>
+                <a href="index.php?page=order" class="primary-action">Xem đơn hàng</a>
+            </div>
         </div>
     </div>
     <script src="js/checkout.js?v=<?php echo time(); ?>"></script>

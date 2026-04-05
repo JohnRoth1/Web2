@@ -104,6 +104,28 @@ function passEdit($field)
     }
 }
 
+function passResetDefault($field)
+{
+    global $database;
+    $username = mysqli_real_escape_string($database->conn, $field['username']);
+    $defaultPassword = '123456';
+
+    $sql_select = "SELECT * FROM accounts WHERE username = '$username'";
+    $result = $database->query($sql_select);
+    if (!$result || mysqli_num_rows($result) === 0) {
+        return "<span class='failed'>Tài khoản $username không tồn tại</span>";
+    }
+
+    $sql_update = "UPDATE accounts SET password = '$defaultPassword' WHERE username ='$username'";
+    $result_update = $database->query($sql_update);
+
+    if ($result_update) {
+        return "<span class='success'>Đã reset mật khẩu về mặc định 123456</span>";
+    }
+
+    return "<span class='failed'>Reset mật khẩu thất bại</span>";
+}
+
 function create_account($field)
 {
     global $database;

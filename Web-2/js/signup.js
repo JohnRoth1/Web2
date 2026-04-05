@@ -140,17 +140,11 @@ const validationFormDangKy = () => {
 
   const regexFullName = /[a-zA-ZÀ-ỹ]+(\s[a-zA-ZÀ-ỹ]+){1,}$/;
   const regexPhoneNumber = /^0[0-9]{9}$/;
-  const regexUsername = /^[a-zA-Z][a-zA-Z0-9]{7,}$/;
   const regexEmail =
     /^(([A-Za-z0-9]+((\.|\-|\_|\+)?[A-Za-z0-9]?)*[A-Za-z0-9]+)|[A-Za-z0-9]+)@(([A-Za-z0-9]+)+((\.|\-|\_)?([A-Za-z0-9]+)+)*)+\.([A-Za-z]{2,})+$/;
 
   if (registerUsername.value.trim() == "") {
     errMessageUsernameRegister.innerText = "Vui lòng điền username";
-    registerUsername.focus();
-    isNotEmptyUsername = false;
-  } else if (!regexUsername.test(registerUsername.value.trim())) {
-    errMessageUsernameRegister.innerText =
-      "Nhập username đúng định dạng, kí tự bắt đầu là chữ và tối thiểu 8 kí tự (ví dụ: minhne04)";
     registerUsername.focus();
     isNotEmptyUsername = false;
   } else {
@@ -202,11 +196,6 @@ const validationFormDangKy = () => {
 
   if (registerPassword.value.trim() == "") {
     errMessagePasswordRegister.innerText = "Vui lòng điền mật khẩu";
-    isNotEmptyPassword = false;
-  } else if (registerPassword.value.trim().length < 8) {
-    errMessagePasswordRegister.innerText =
-      "Vui lòng điền mật khẩu tối thiểu 8 kí tự";
-    registerPassword.focus();
     isNotEmptyPassword = false;
   } else {
     errMessagePasswordRegister.innerText = "";

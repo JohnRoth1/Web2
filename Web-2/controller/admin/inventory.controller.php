@@ -20,14 +20,26 @@ if (isset($_POST['function'])) {
     case 'getStockAtDate':
       getStockAtDate();
       break;
+    case 'getStockInRange':
+      getStockInRange();
+      break;
     case 'getProductTransactionsAtDate':
       getProductTransactionsAtDate();
+      break;
+    case 'getTransactionDocumentDetail':
+      getTransactionDocumentDetail();
+      break;
+    case 'deleteTransactionDocument':
+      deleteTransactionDocument();
       break;
     case 'getLowStockProducts':
       getLowStockProducts();
       break;
     case 'getLowStockCount':
       getLowStockCount();
+      break;
+    case 'getStockStatusCounts':
+      getStockStatusCounts();
       break;
     case 'updateAlertQty':
       updateAlertQty();
@@ -103,12 +115,19 @@ function getStockAtDate()
   $date = isset($_POST['date']) ? $_POST['date'] : date('Y-m-d');
   $page = isset($_POST['page']) ? intval($_POST['page']) : 1;
   $perPage = 8;
+  $search = isset($_POST['search']) ? trim($_POST['search']) : '';
+  $status = isset($_POST['status']) ? trim($_POST['status']) : '';
   
-  error_log("getStockAtDate called with date: " . $date . ", page: " . $page);
+  error_log("getStockAtDate called with date: " . $date . ", page: " . $page . ", search: " . $search . ", status: " . $status);
   
-  $data = inventory_getStockAtDate($date, $page, $perPage);
-  $total = inventory_getTotalProducts($date);
-  $totalPages = ceil($total / $perPage);
+  $filters = [
+    'search' => $search,
+    'status' => $status
+  ];
+
+  $data = inventory_getStockAtDate($date, $page, $perPage, $filters);
+  $total = inventory_getTotalProducts($date, $filters);
+  $totalPages = $total > 0 ? ceil($total / $perPage) : 1;
   
   $result = [
     'data' => $data,
@@ -119,6 +138,35 @@ function getStockAtDate()
   ];
   
   error_log("getStockAtDate returning: " . json_encode($result));
+  echo json_encode($result);
+}
+
+function getStockInRange()
+{
+  $date_start = isset($_POST['date_start']) ? $_POST['date_start'] : date('Y-m-d', strtotime('-30 days'));
+  $date_end = isset($_POST['date_end']) ? $_POST['date_end'] : date('Y-m-d');
+  $page = isset($_POST['page']) ? intval($_POST['page']) : 1;
+  $perPage = 8;
+  $search = isset($_POST['search']) ? trim($_POST['search']) : '';
+  $status = isset($_POST['status']) ? trim($_POST['status']) : '';
+
+  $filters = [
+    'search' => $search,
+    'status' => $status
+  ];
+
+  $data = inventory_getStockInRange($date_start, $date_end, $page, $perPage, $filters);
+  $total = inventory_getTotalProductsInRange($date_start, $date_end, $filters);
+  $totalPages = $total > 0 ? ceil($total / $perPage) : 1;
+
+  $result = [
+    'data' => $data,
+    'total' => $total,
+    'page' => $page,
+    'perPage' => $perPage,
+    'totalPages' => $totalPages
+  ];
+
   echo json_encode($result);
 }
 
@@ -136,10 +184,18 @@ function getLowStockCount()
   echo json_encode(['count' => $count]);
 }
 
+function getStockStatusCounts()
+{
+  $counts = inventory_getStockStatusCounts();
+  header('Content-Type: application/json');
+  echo json_encode($counts);
+}
+
 function updateAlertQty()
 {
   if (isset($_POST['product_id']) && isset($_POST['alert_qty'])) {
-    $result = inventory_updateAlertQty($_POST['product_id'], $_POST['alert_qty']);
+    $out_of_stock_qty = isset($_POST['out_of_stock_qty']) ? $_POST['out_of_stock_qty'] : 0;
+    $result = inventory_updateAlertQty($_POST['product_id'], $_POST['alert_qty'], $out_of_stock_qty);
     header('Content-Type: application/json');
     echo json_encode(['success' => $result]);
   } else {
@@ -156,13 +212,33 @@ function getProductTransactionsAtDate()
   echo json_encode($data);
 }
 
+function getTransactionDocumentDetail()
+{
+  $document_type = isset($_POST['document_type']) ? $_POST['document_type'] : '';
+  $document_id = isset($_POST['document_id']) ? intval($_POST['document_id']) : 0;
+
+  $data = inventory_getTransactionDocumentDetail($document_type, $document_id);
+  header('Content-Type: application/json');
+  echo json_encode($data);
+}
+
+function deleteTransactionDocument()
+{
+  header('Content-Type: application/json');
+  echo json_encode([
+    'success' => false,
+    'message' => 'Không cho phép xóa bill/phiếu trong màn hình này'
+  ]);
+}
+
 function setBulkAlertQty()
 {
   if (isset($_POST['alert_qty'])) {
     $alert_qty = $_POST['alert_qty'];
-    error_log("setBulkAlertQty - Received alert_qty: $alert_qty");
+    $out_of_stock_qty = isset($_POST['out_of_stock_qty']) ? $_POST['out_of_stock_qty'] : 0;
+    error_log("setBulkAlertQty - Received alert_qty: $alert_qty, out_of_stock_qty: $out_of_stock_qty");
     
-    $result = inventory_setBulkAlertQty($alert_qty);
+    $result = inventory_setBulkAlertQty($alert_qty, $out_of_stock_qty);
     header('Content-Type: application/json');
     error_log("setBulkAlertQty - Result: " . ($result ? "true" : "false"));
     echo json_encode(['success' => (bool)$result]);
@@ -177,5 +253,8 @@ function getDefaultAlertQty()
 {
   $default = inventory_getDefaultAlertQty();
   header('Content-Type: application/json');
-  echo json_encode(['default_alert_qty' => $default]);
+  echo json_encode([
+    'default_alert_qty' => $default['alert_qty'],
+    'default_out_of_stock_qty' => $default['out_of_stock_qty']
+  ]);
 }

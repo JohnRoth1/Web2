@@ -26,14 +26,27 @@ function receipt_ensureSupplierColumn($database)
 function receipt_getAverageCostPrice($database, $productId)
 {
   $pid = intval($productId);
-  $sql = "SELECT quantity, input_price
-          FROM goodsreceipt_details
-          WHERE product_id = '$pid'";
+  $sql = "SELECT COALESCE(price, 0) as price
+          FROM products
+          WHERE id = '$pid'
+          LIMIT 1";
   $result = $database->query($sql);
+  if ($result && $result->num_rows > 0) {
+    $row = $result->fetch_assoc();
+    $costPrice = floatval($row['price']);
+    if ($costPrice > 0) {
+      return $costPrice;
+    }
+  }
+
+  $sqlFallback = "SELECT quantity, input_price
+                  FROM goodsreceipt_details
+                  WHERE product_id = '$pid'";
+  $resultFallback = $database->query($sqlFallback);
 
   $totalQty = 0;
   $totalCost = 0;
-  while ($row = $result->fetch_assoc()) {
+  while ($resultFallback && ($row = $resultFallback->fetch_assoc())) {
     $qty = intval($row['quantity']);
     $price = floatval($row['input_price']);
     $totalQty += $qty;
@@ -44,28 +57,46 @@ function receipt_getAverageCostPrice($database, $productId)
   return $totalCost / $totalQty;
 }
 
-function receipt_recalculateSellingPrice($database, $productId)
+function receipt_applyMovingAverageCost($database, $productId, $importQty, $importPrice)
 {
   $pid = intval($productId);
-  $avgCost = receipt_getAverageCostPrice($database, $pid);
-  if ($avgCost <= 0) return true;
+  $qty = intval($importQty);
+  $price = floatval($importPrice);
 
-  $sqlProduct = "SELECT COALESCE(profit_margin, 0) as profit_margin
-                 FROM products
-                 WHERE id = '$pid'
-                 LIMIT 1";
-  $resultProduct = $database->query($sqlProduct);
-  if (!$resultProduct || $resultProduct->num_rows === 0) return false;
+  if ($qty <= 0 || $price <= 0) {
+    return true;
+  }
 
-  $margin = floatval($resultProduct->fetch_assoc()['profit_margin']);
-  $newPrice = $avgCost * (1 + $margin / 100);
+  $sqlGet = "SELECT quantity, COALESCE(price, 0) as price
+             FROM products
+             WHERE id = '$pid'
+             FOR UPDATE";
+  $resultGet = $database->query($sqlGet);
+  if (!$resultGet || $resultGet->num_rows === 0) {
+    return false;
+  }
 
-  date_default_timezone_set('Asia/Ho_Chi_Minh');
-  $date = date('Y-m-d', time());
-  $sqlUpdate = "UPDATE products
-                SET price = '$newPrice', update_date = '$date'
-                WHERE id = '$pid'";
+  $row = $resultGet->fetch_assoc();
+  $currentQty = intval($row['quantity']);
+  $currentCost = floatval($row['price']);
+  $newTotalQty = $currentQty + $qty;
+
+  if ($newTotalQty <= 0) {
+    $newCost = $price;
+  } else {
+    $newCost = (($currentQty * $currentCost) + ($qty * $price)) / $newTotalQty;
+  }
+
+  $newCostSafe = mysqli_real_escape_string($database->conn, strval($newCost));
+  $sqlUpdate = "UPDATE products SET price = '$newCostSafe' WHERE id = '$pid'";
   return $database->execute($sqlUpdate);
+}
+
+function receipt_recalculateSellingPrice($database, $productId)
+{
+  // Với quy ước hiện tại, products.price chính là giá vốn.
+  // Giá bán được tính động ở giao diện từ giá vốn và profit_margin.
+  return true;
 }
 
 function getNewReceiptId($database)
@@ -106,6 +137,10 @@ function receipt_create($field)
       $productId = $detail['productId'];
       $quantity = $detail['quantity'];
       $inputPrice = $detail['inputPrice'];
+
+      if (!receipt_applyMovingAverageCost($database, $productId, $quantity, $inputPrice)) {
+        return "<span class='failed'>Không thể cập nhật giá vốn bình quân</span>";
+      }
 
       $sqlInsertDetail = "INSERT INTO goodsreceipt_details (product_id, goodsreceipt_id, quantity, input_price) 
                                     VALUES ('" . $productId . "', '" . $receiptId . "', '" . $quantity . "', '" . $inputPrice . "')";
@@ -504,4 +539,84 @@ function receipt_complete($field)
     return "<span class='success'>Đã hoàn thành phiếu nhập</span>";
   }
   return "<span class='failed'>Không thể hoàn thành phiếu nhập</span>";
+}
+
+function receipt_delete($field)
+{
+  $database = new connectDB();
+  receipt_ensureStatusColumn($database);
+
+  if (!isset($field['id'])) {
+    return "<span class='failed'>Thiếu mã phiếu nhập</span>";
+  }
+
+  $receiptId = intval($field['id']);
+  if ($receiptId <= 0) {
+    return "<span class='failed'>Mã phiếu nhập không hợp lệ</span>";
+  }
+
+  $sqlCheck = "SELECT status FROM goodsreceipts WHERE id = '$receiptId' LIMIT 1";
+  $checkResult = $database->query($sqlCheck);
+  if (!$checkResult || $checkResult->num_rows === 0) {
+    return "<span class='failed'>Không tìm thấy phiếu nhập</span>";
+  }
+
+  $status = $checkResult->fetch_assoc()['status'];
+  if ($status === 'completed') {
+    return "<span class='failed'>Phiếu nhập đã hoàn thành, không thể xóa</span>";
+  }
+
+  mysqli_begin_transaction($database->conn);
+  try {
+    $sqlDetails = "SELECT product_id, quantity
+                   FROM goodsreceipt_details
+                   WHERE goodsreceipt_id = '$receiptId'";
+    $detailResult = $database->query($sqlDetails);
+
+    $touchedProductIds = [];
+    if ($detailResult) {
+      while ($detail = $detailResult->fetch_assoc()) {
+        $pid = intval($detail['product_id']);
+        $qty = intval($detail['quantity']);
+
+        $sqlStock = "SELECT quantity FROM products WHERE id = '$pid' FOR UPDATE";
+        $stockResult = $database->query($sqlStock);
+        if (!$stockResult || $stockResult->num_rows === 0) {
+          throw new Exception('Không tìm thấy sản phẩm để hoàn tác tồn kho');
+        }
+
+        $currentQty = intval($stockResult->fetch_assoc()['quantity']);
+        if ($currentQty < $qty) {
+          throw new Exception('Không đủ tồn kho để xóa phiếu nhập');
+        }
+
+        $sqlRollbackQty = "UPDATE products SET quantity = quantity - ($qty) WHERE id = '$pid'";
+        if (!$database->execute($sqlRollbackQty)) {
+          throw new Exception('Không thể cập nhật tồn kho khi xóa phiếu nhập');
+        }
+
+        $touchedProductIds[] = $pid;
+      }
+    }
+
+    $sqlDeleteDetails = "DELETE FROM goodsreceipt_details WHERE goodsreceipt_id = '$receiptId'";
+    if (!$database->execute($sqlDeleteDetails)) {
+      throw new Exception('Không thể xóa chi tiết phiếu nhập');
+    }
+
+    $sqlDeleteReceipt = "DELETE FROM goodsreceipts WHERE id = '$receiptId'";
+    if (!$database->execute($sqlDeleteReceipt)) {
+      throw new Exception('Không thể xóa phiếu nhập');
+    }
+
+    foreach (array_unique($touchedProductIds) as $pid) {
+      receipt_recalculateSellingPrice($database, $pid);
+    }
+
+    mysqli_commit($database->conn);
+    return "<span class='success'>Xóa phiếu nhập thành công</span>";
+  } catch (Exception $e) {
+    mysqli_rollback($database->conn);
+    return "<span class='failed'>Xóa phiếu nhập thất bại: " . $e->getMessage() . "</span>";
+  }
 }

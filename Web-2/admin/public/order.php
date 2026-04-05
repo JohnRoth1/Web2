@@ -20,7 +20,7 @@ $_SESSION["render"]->setTable("orders");
 
     <form class="admin__content--body__filter">
         <h1>Lọc đơn hàng</h1>
-        <p>* Lưu ý: Định dạng dữ liệu ngày tạo đơn được hiển thị là dạng dd/mm/yyyy</p>
+        <p>* Lưu ý: Ngày lọc theo định dạng yyyy-mm-dd.</p>
         <div class="admin__content--body__filter--gr1">
             <div class="body__filter--field body__filter--idOrder">
                 <p>Mã đơn hàng</p>
@@ -35,7 +35,7 @@ $_SESSION["render"]->setTable("orders");
 
             <div class="body__filter--field body__filter--idClient">
                 <p>Mã nhân viên</p>
-                <input id="idStaff" type="text" placeholder="Nhập mã khách hàng" />
+                <input id="idStaff" type="text" placeholder="Nhập mã nhân viên" />
                 <p id="message_idStaff" class = "message"></p>
             </div>
                 <div class="body__filter--field body__filter--address">
