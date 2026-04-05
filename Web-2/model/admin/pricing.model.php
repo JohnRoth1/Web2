@@ -84,7 +84,7 @@ function pricing_applyMargin($product_id, $margin_percent)
   
   $product_id = mysqli_real_escape_string($database->conn, $product_id);
   $margin_percent = floatval($margin_percent);
-  $margin_ratio = $margin_percent / 100;
+  $margin_ratio = round($margin_percent / 100, 3);
   
   error_log("pricing_applyMargin - Product ID: $product_id, Margin: $margin_percent%");
   
@@ -127,7 +127,7 @@ function pricing_increaseProfitMarginAll($increase_percent)
   $date = date('Y-m-d', time());
 
   $increase = floatval($increase_percent);
-  $increase_ratio = $increase / 100;
+  $increase_ratio = round($increase / 100, 3);
   if ($increase < 0) {
     $database->close();
     return [
@@ -309,7 +309,7 @@ function pricing_getBatchDetails($batch_id)
       grd.input_price as cost_price,
       p.price as average_cost_price,
       COALESCE(p.profit_margin, 0) as margin_ratio,
-      ROUND(COALESCE(p.profit_margin, 0) * 100, 2) as margin_percent,
+      ROUND(COALESCE(p.profit_margin, 0) * 100, 1) as margin_percent,
       s.name as supplier_name
     FROM goodsreceipt_details grd
     JOIN products p ON grd.product_id = p.id

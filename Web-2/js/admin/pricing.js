@@ -755,6 +755,6 @@ function formatPercent(value) {
     return '-';
   }
 
-  const roundedValue = Number(value.toFixed(2));
+  const roundedValue = Number(value.toFixed(1));
   return `${roundedValue}%`;
 }
