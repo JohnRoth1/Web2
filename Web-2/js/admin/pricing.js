@@ -11,6 +11,7 @@ let allBatches = [];
 let currentBatchSearch = '';
 let currentBatchId = null;
 let currentBatchProductName = null;
+let batchSearchTimeout = null; // OPTIMIZED: Debounce timer for batch search
 
 $(document).ready(function () {
   loadProducts();
@@ -57,16 +58,27 @@ function initializeEventListeners() {
     applyProductFilterAndRender();
   });
 
-  // Batch view: Search
+  // Batch view: Search - OPTIMIZED with debounce to prevent excessive queries
   $("#btnSearchBatch").click(function () {
-    currentBatchSearch = $("#searchBatch").val();
+    currentBatchSearch = $("#searchBatch").val().trim();
     currentBatchPage = 1;
     loadReceipts();
+  });
+
+  // OPTIMIZED: Debounce batch search input to prevent too many requests
+  $("#searchBatch").on("input", function () {
+    clearTimeout(batchSearchTimeout);
+    batchSearchTimeout = setTimeout(function () {
+      currentBatchSearch = $("#searchBatch").val().trim();
+      currentBatchPage = 1;
+      loadReceipts();
+    }, 500); // Wait 500ms before searching while user types
   });
 
   // Batch view: Search on Enter
   $("#searchBatch").keypress(function (e) {
     if (e.which === 13) {
+      clearTimeout(batchSearchTimeout);
       $("#btnSearchBatch").click();
     }
   });
@@ -365,12 +377,14 @@ function displayProducts(products) {
     return;
   }
 
+  // OPTIMIZED: Build HTML string once, append once
+  let htmlContent = '';
   products.forEach(function (product) {
     const costPrice = parseFloat(product.average_cost_price) || 0;
     const marginRatio = parseFloat(product.profit_margin) || 0;
     const marginPercent = marginRatio * 100;
     const sellingPrice = costPrice * (1 + marginRatio);
-    const html = `
+    htmlContent += `
       <tr>
         <td>${product.id}</td>
         <td>${product.name}</td>
@@ -385,8 +399,9 @@ function displayProducts(products) {
         </td>
       </tr>
     `;
-    tbody.append(html);
   });
+  
+  tbody.html(htmlContent);
 }
 
 function filterProducts() {
@@ -565,8 +580,10 @@ function displayReceipts(result) {
     return;
   }
 
+  // OPTIMIZED: Build HTML string once instead of appending per row
+  let htmlContent = '';
   result.data.forEach(function (batch) {
-    const html = `
+    htmlContent += `
       <tr>
         <td>${batch.batch_id}</td>
         <td>${batch.date_create}</td>
@@ -579,8 +596,10 @@ function displayReceipts(result) {
         </td>
       </tr>
     `;
-    tbody.append(html);
   });
+  
+  // Append all at once instead of multiple times
+  tbody.html(htmlContent);
 }
 
 function updateBatchPagination(result) {
@@ -655,7 +674,7 @@ function displayBatchDetails(result) {
   $("#modalBatchDate").text(batchInfo.batch_date);
   $("#modalBatchSupplier").text(batchInfo.supplier_name || '-');
 
-  // Display products
+  // Display products - OPTIMIZED
   const tbody = $("#batchDetailsBody");
   tbody.empty();
 
@@ -664,9 +683,11 @@ function displayBatchDetails(result) {
     return;
   }
 
+  // OPTIMIZED: Build HTML string once, append once
+  let htmlContent = '';
   products.forEach(function (product) {
     const marginValue = parseFloat(product.margin_percent) || 0;
-    const html = `
+    htmlContent += `
       <tr>
         <td>${product.product_id}</td>
         <td>${product.product_name}</td>
@@ -685,8 +706,9 @@ function displayBatchDetails(result) {
         </td>
       </tr>
     `;
-    tbody.append(html);
   });
+  
+  tbody.html(htmlContent);
 }
 
 function openBatchMarginModal(productId, productName, averageCost, currentMargin = 0) {

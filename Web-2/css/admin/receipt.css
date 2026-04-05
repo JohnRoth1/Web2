@@ -17,7 +17,11 @@
   flex-direction: column;
   height: 600px;
   border-radius: 5px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: none;
+  border-top: 4px solid #0077B6;
 }
+
 .addModal-content {
   position: relative;
   background-color: #fefefe;
@@ -31,6 +35,9 @@
   flex-direction: column;
   /* height: 70%; */
   border-radius: 5px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: none;
+  border-top: 4px solid #27AE60;
 }
 
 .input-field {
@@ -105,4 +112,142 @@
 }
 #addTable {
   width: 100%;
+}
+
+/* ======= STATUS STYLES ======= */
+.receipt_status {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+/* Status: Chưa hoàn thành (Draft) */
+.receipt_status[data-status="draft"] {
+  background-color: #FFF4E6;
+  color: #E67E22;
+  border-left: 4px solid #E67E22;
+}
+
+.receipt_status[data-status="draft"]:hover {
+  background-color: #FFE8CC;
+  box-shadow: 0 2px 8px rgba(230, 126, 34, 0.15);
+}
+
+/* Status: Hoàn thành (Completed) */
+.receipt_status[data-status="completed"] {
+  background-color: #E8F5E9;
+  color: #27AE60;
+  border-left: 4px solid #27AE60;
+}
+
+.receipt_status[data-status="completed"]:hover {
+  background-color: #C8E6C9;
+  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.15);
+}
+
+/* ======= ACTION BUTTONS STYLES ======= */
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.actions button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.actions button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.actions button:active:not(:disabled) {
+  transform: translateY(0px);
+}
+
+/* Edit/View Button */
+.actions--edit {
+  background-color: #0077B6;
+  color: white;
+  border-left: 3px solid #005A87;
+}
+
+.actions--edit:hover {
+  background-color: #005A87;
+  background-image: linear-gradient(135deg, #0077B6 0%, #005A87 100%);
+}
+
+.actions--edit::before {
+  content: "\f06e";
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 600;
+}
+
+/* Complete Button */
+.actions--complete {
+  background-color: #27AE60;
+  color: white;
+  border-left: 3px solid #1E8449;
+}
+
+.actions--complete:hover {
+  background-color: #1E8449;
+  background-image: linear-gradient(135deg, #27AE60 0%, #1E8449 100%);
+}
+
+.actions--complete:disabled {
+  background-color: #BDC3C7;
+  color: #95A5A6;
+  cursor: not-allowed;
+  border-left-color: #95A5A6;
+  opacity: 0.6;
+}
+
+.actions--complete::before {
+  content: "\f058";
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 600;
+}
+
+/* Delete Button */
+.actions--delete {
+  background-color: #E74C3C;
+  color: white;
+  border-left: 3px solid #C0392B;
+}
+
+.actions--delete:hover {
+  background-color: #C0392B;
+  background-image: linear-gradient(135deg, #E74C3C 0%, #C0392B 100%);
+}
+
+.actions--delete:disabled {
+  background-color: #BDC3C7;
+  color: #95A5A6;
+  cursor: not-allowed;
+  border-left-color: #95A5A6;
+  opacity: 0.6;
+}
+
+.actions--delete::before {
+  content: "\f2ed";
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 600;
 }

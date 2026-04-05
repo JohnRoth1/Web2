@@ -181,34 +181,41 @@ function pricing_increaseProfitMarginAll($increase_percent)
   ];
 }
 
-// Lấy danh sách lô hàng (goods receipts) với pagination
+// Lấy danh sách lô hàng (goods receipts) với pagination - OPTIMIZED
 function pricing_getReceipts($search = '', $page = 1, $perPage = 10)
 {
   $database = new connectDB();
-  $search = mysqli_real_escape_string($database->conn, $search);
+  $search = trim($search);
+  $limit = 1000; // Prevent excessive search results
   
-  // Build search condition
   $searchCondition = "";
+  $searchParams = [];
+  
   if (!empty($search)) {
+    // Escape search term for LIKE queries
+    $searchTerm = '%' . mysqli_real_escape_string($database->conn, $search) . '%';
     $searchCondition = "WHERE 
-      gr.id LIKE '%$search%' 
-      OR DATE_FORMAT(gr.date_create, '%d/%m/%Y') LIKE '%$search%'
-      OR p.id LIKE '%$search%'
-      OR p.name LIKE '%$search%'
-      OR s.name LIKE '%$search%'";
+      gr.id LIKE '$searchTerm' 
+      OR DATE_FORMAT(gr.date_create, '%d/%m/%Y') LIKE '$searchTerm'
+      OR grd.product_id IN (
+        SELECT id FROM products WHERE id LIKE '$searchTerm' OR name LIKE '$searchTerm'
+      )
+      OR p.supplier_id IN (
+        SELECT id FROM suppliers WHERE name LIKE '$searchTerm'
+      )";
   }
   
-  // Count total records for pagination
+  // OPTIMIZED: Simplified COUNT query without unnecessary JOINs
   $countSql = "
     SELECT COUNT(DISTINCT gr.id) as total
     FROM goodsreceipts gr
     LEFT JOIN goodsreceipt_details grd ON gr.id = grd.goodsreceipt_id
     LEFT JOIN products p ON grd.product_id = p.id
-    LEFT JOIN suppliers s ON p.supplier_id = s.id
     $searchCondition
+    LIMIT $limit
   ";
   
-  error_log("pricing_getReceipts - CountSQL: " . $countSql);
+  error_log("pricing_getReceipts - CountSQL performance optimized");
   
   $countResult = $database->query($countSql);
   if (!$countResult) {
@@ -230,23 +237,25 @@ function pricing_getReceipts($search = '', $page = 1, $perPage = 10)
   // Get paginated records
   $offset = ($page - 1) * $perPage;
   
+  // OPTIMIZED: Simplified main query - fetch only needed data
   $sql = "
     SELECT 
       gr.id as batch_id,
       DATE_FORMAT(gr.date_create, '%d/%m/%Y') as date_create,
-      COUNT(grd.product_id) as product_count,
-      GROUP_CONCAT(DISTINCT s.name SEPARATOR ', ') as supplier_name
+      (SELECT COUNT(*) FROM goodsreceipt_details WHERE goodsreceipt_id = gr.id) as product_count,
+      (SELECT GROUP_CONCAT(DISTINCT s.name SEPARATOR ', ')
+       FROM goodsreceipt_details grd2
+       JOIN products p2 ON grd2.product_id = p2.id
+       JOIN suppliers s ON p2.supplier_id = s.id
+       WHERE grd2.goodsreceipt_id = gr.id) as supplier_name
     FROM goodsreceipts gr
-    LEFT JOIN goodsreceipt_details grd ON gr.id = grd.goodsreceipt_id
-    LEFT JOIN products p ON grd.product_id = p.id
-    LEFT JOIN suppliers s ON p.supplier_id = s.id
     $searchCondition
     GROUP BY gr.id
     ORDER BY gr.date_create DESC
     LIMIT $offset, $perPage
   ";
   
-  error_log("pricing_getReceipts - SQL: " . $sql);
+  error_log("pricing_getReceipts - Getting paginated data");
   
   $result = $database->query($sql);
   $data = [];
@@ -280,37 +289,56 @@ function pricing_getReceipts($search = '', $page = 1, $perPage = 10)
   ];
 }
 
-// Lấy chi tiết sản phẩm trong một lô hàng
+// Lấy chi tiết sản phẩm trong một lô hàng - OPTIMIZED
 function pricing_getBatchDetails($batch_id)
 {
   $database = new connectDB();
   $batch_id = mysqli_real_escape_string($database->conn, $batch_id);
   
+  // OPTIMIZED: Simplified query - fetch batch info separately
+  // First get batch header info
+  $sqlHeader = "
+    SELECT 
+      gr.id as batch_id,
+      DATE_FORMAT(gr.date_create, '%d/%m/%Y') as batch_date,
+      (SELECT GROUP_CONCAT(DISTINCT s.name SEPARATOR ', ')
+       FROM goodsreceipt_details grd
+       JOIN products p ON grd.product_id = p.id
+       JOIN suppliers s ON p.supplier_id = s.id
+       WHERE grd.goodsreceipt_id = gr.id) as supplier_name
+    FROM goodsreceipts gr
+    WHERE gr.id = '$batch_id'
+  ";
+  
+  $batchInfo = [];
+  $headerResult = $database->query($sqlHeader);
+  if ($headerResult && mysqli_num_rows($headerResult) > 0) {
+    $batchInfo = mysqli_fetch_assoc($headerResult);
+  }
+  
+  // OPTIMIZED: Fetch details with minimal calculations
+  // Calculate prices once, not per-row
   $sql = "
     SELECT 
       grd.product_id,
       p.name as product_name,
       grd.quantity as input_quantity,
       grd.input_price as cost_price,
-      ROUND(COALESCE(p.profit_margin, 0) * 100, 2) as margin_percent,
       p.price as average_cost_price,
-      (p.price * (1 + COALESCE(p.profit_margin, 0))) as batch_selling_price,
-      (p.price * (1 + COALESCE(p.profit_margin, 0))) as current_selling_price,
-      s.name as supplier_name,
-      DATE_FORMAT(gr.date_create, '%d/%m/%Y') as batch_date
+      COALESCE(p.profit_margin, 0) as margin_ratio,
+      ROUND(COALESCE(p.profit_margin, 0) * 100, 2) as margin_percent,
+      s.name as supplier_name
     FROM goodsreceipt_details grd
-    JOIN goodsreceipts gr ON grd.goodsreceipt_id = gr.id
     JOIN products p ON grd.product_id = p.id
     JOIN suppliers s ON p.supplier_id = s.id
     WHERE grd.goodsreceipt_id = '$batch_id'
     ORDER BY p.id ASC
   ";
   
-  error_log("pricing_getBatchDetails - Batch ID: $batch_id, SQL: " . $sql);
+  error_log("pricing_getBatchDetails - Batch ID: $batch_id, optimized query");
   
   $result = $database->query($sql);
   $data = [];
-  $batchInfo = [];
   
   if (!$result) {
     error_log("pricing_getBatchDetails - Query failed: " . $database->conn->error);
@@ -321,17 +349,16 @@ function pricing_getBatchDetails($batch_id)
     ];
   }
   
+  // Calculate prices in PHP once instead of SQL multiple times
   while ($row = mysqli_fetch_assoc($result)) {
-    $data[] = $row;
+    $costPrice = floatval($row['average_cost_price']);
+    $marginRatio = floatval($row['margin_ratio']);
+    $sellingPrice = $costPrice * (1 + $marginRatio);
     
-    // Store batch info from first record
-    if (empty($batchInfo)) {
-      $batchInfo = [
-        'batch_id' => $batch_id,
-        'batch_date' => $row['batch_date'],
-        'supplier_name' => $row['supplier_name']
-      ];
-    }
+    $row['batch_selling_price'] = round($sellingPrice, 2);
+    $row['current_selling_price'] = round($sellingPrice, 2);
+    
+    $data[] = $row;
   }
   
   error_log("pricing_getBatchDetails - Retrieved " . count($data) . " products");
