@@ -417,17 +417,22 @@ function addProduct() {
       if (row.cells[0].textContent === productId) {
         let prevQuantity = parseInt(row.cells[2].textContent);
         let newQuantity = prevQuantity + parseInt(quantity);
+        const lineTotal = newQuantity * inputPrice;
         row.cells[2].textContent = newQuantity;
         row.cells[3].textContent = inputPrice.toLocaleString("vi-VN", {
           style: "currency",
           currency: "VND",
         });
+        if (row.cells[4]) {
+          row.cells[4].textContent = lineTotal.toLocaleString("vi-VN") + " ₫";
+        }
         productExists = true;
       }
     });
 
     if (!productExists) {
       const newRow = tableBody.insertRow();
+      const lineTotal = parseInt(quantity, 10) * inputPrice;
       newRow.innerHTML = `
         <td>${productId}</td>
         <td>${productName}</td> 
@@ -436,6 +441,7 @@ function addProduct() {
           style: "currency",
           currency: "VND",
         })}</td>
+        <td>${lineTotal.toLocaleString("vi-VN")} ₫</td>
       `;
     }
 
@@ -444,7 +450,31 @@ function addProduct() {
     productName = "";
     document.getElementById("quantity").value = "";
     document.getElementById("inputPrice").value = "";
+    updateAddReceiptTotal();
   });
+}
+
+function updateAddReceiptTotal() {
+  const rows = document.querySelectorAll("#productTableBody tr");
+  let totalPrice = 0;
+
+  rows.forEach(row => {
+    const quantity = parseInt(row.cells[2]?.textContent.trim(), 10) || 0;
+    const inputPriceText = row.cells[3]?.textContent || "";
+    const inputPrice = parseInt(inputPriceText.replace(/[^\d]/g, ""), 10) || 0;
+    const lineTotal = quantity * inputPrice;
+    if (row.cells[4]) {
+      row.cells[4].textContent = lineTotal.toLocaleString("vi-VN") + " ₫";
+    }
+    totalPrice += lineTotal;
+  });
+
+  const totalField = document.getElementById("add_total_price");
+  if (totalField) {
+    totalField.value = totalPrice.toLocaleString("vi-VN") + " ₫";
+  }
+
+  return totalPrice;
 }
 
 function deleteRow() {
@@ -452,6 +482,7 @@ function deleteRow() {
   const rowCount = table.rows.length;
   if (rowCount > 1) {
     table.deleteRow(rowCount - 1);
+    updateAddReceiptTotal();
   } else {
     alert("Không có dòng để xóa.");
   }
@@ -477,6 +508,7 @@ function getProductsBySupplier(selectElement) {
   selectElement.setAttribute("data-current", selectElement.value);
 
   tableBody.innerHTML = "";
+  updateAddReceiptTotal();
 
   const supplierId = selectElement.value;
   $.ajax({
@@ -518,6 +550,7 @@ const openModal = addHtml => {
       // Điền ngày hiện tại làm mặc định
       const today = new Date().toISOString().split("T")[0];
       document.getElementById("date_create_add").value = today;
+      updateAddReceiptTotal();
 
       $.ajax({
         url: "../controller/admin/receipt.controller.php",
@@ -546,16 +579,14 @@ const openModal = addHtml => {
       const supplierId = document.getElementById("supplier").value;
 
       const products = document.querySelectorAll("#productTableBody tr");
-      let totalPrice = 0;
+      const totalPrice = updateAddReceiptTotal();
 
       let detailData = [];
       products.forEach(product => {
         const productId = product.cells[0].textContent;
         const quantity = product.cells[2].textContent;
         const inputPriceText = product.cells[3].textContent;
-        const inputPrice =
-          parseFloat(inputPriceText.replace(/[^\d.-]/g, "")) * 1000;
-        totalPrice += parseFloat(quantity) * inputPrice;
+        const inputPrice = parseInt(inputPriceText.replace(/[^\d]/g, ""), 10) || 0;
         detailData.push({ productId, quantity, inputPrice });
       });
       if (totalPrice === 0) {
@@ -566,6 +597,15 @@ const openModal = addHtml => {
         .querySelector(".topbar__admin-info h2")
         .innerHTML.trim();
       const dateCreateAdd = document.getElementById("date_create_add").value;
+      let addStatus = 'draft';
+      document.querySelectorAll('input[name="add_receipt_status_option"]').forEach(radio => {
+        if (radio.checked) addStatus = radio.value;
+      });
+      if (addStatus === 'completed') {
+        if (!confirm("Bạn có chắc muốn tạo phiếu nhập với trạng thái 'Hoàn thành'? Hàng sẽ được nhập vào kho ngay.")) {
+          return;
+        }
+      }
       $.ajax({
         url: "../controller/admin/receipt.controller.php",
         type: "post",
@@ -578,6 +618,7 @@ const openModal = addHtml => {
             details: detailData,
             staffId: staffName,
             dateCreate: dateCreateAdd,
+            status: addStatus,
           },
         },
       }).done(function (result) {
@@ -622,7 +663,16 @@ const openModal = addHtml => {
     </div>
     <div class="input-field">
       <label for="receipt_status">Trạng thái phiếu</label>
-      <input type="text" id="receipt_status" readonly="">
+      <div style="display: flex; gap: 20px; align-items: center;">
+        <label style="display: flex; align-items: center; gap: 8px; width: auto; margin: 0;">
+          <input type="radio" name="receipt_status_option" value="draft" id="status_draft">
+          <span>Chưa hoàn thành</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 8px; width: auto; margin: 0;">
+          <input type="radio" name="receipt_status_option" value="completed" id="status_completed">
+          <span>Hoàn thành</span>
+        </label>
+      </div>
     </div>
   
     <div class="book-table">
@@ -676,9 +726,21 @@ const openModal = addHtml => {
         if (res && res.success && res.data && res.data.date_create) {
           document.getElementById("date_create").value = res.data.date_create;
           const st = res.data.status || rowStatus;
-          document.getElementById("receipt_status").value = st === "completed" ? "Hoàn thành" : "Chưa hoàn thành";
+          // Set radio button based on status
+          if (st === "completed") {
+            document.getElementById("status_completed").checked = true;
+            document.getElementById("status_draft").disabled = true;
+          } else {
+            document.getElementById("status_draft").checked = true;
+          }
         } else {
-          document.getElementById("receipt_status").value = rowStatus === "completed" ? "Hoàn thành" : "Chưa hoàn thành";
+          // Set radio button based on rowStatus
+          if (rowStatus === "completed") {
+            document.getElementById("status_completed").checked = true;
+            document.getElementById("status_draft").disabled = true;
+          } else {
+            document.getElementById("status_draft").checked = true;
+          }
         }
       });
 
@@ -696,6 +758,13 @@ const openModal = addHtml => {
         },
         success: function (response) {
           Table.innerHTML = response;
+
+          // Nếu phiếu đã hoàn thành, ẩn nút lưu và disable các input
+          if (isCompleted) {
+            const saveBtn = document.getElementById("saveReceiptBtn");
+            if (saveBtn) saveBtn.style.display = "none";
+            document.getElementById("date_create").disabled = true;
+          }
 
           // Chỉ cho phép chỉnh sửa khi phiếu chưa hoàn thành
           const rows = Table.querySelectorAll("tbody tr");
@@ -757,45 +826,67 @@ const openModal = addHtml => {
 
           // Lưu chỉnh sửa phiếu nhập
           const saveBtn = document.getElementById("saveReceiptBtn");
-          if (isCompleted && saveBtn) {
-            saveBtn.style.display = "none";
-            document.getElementById("date_create").setAttribute("disabled", "disabled");
-          }
+          const statusRadios = document.querySelectorAll('input[name="receipt_status_option"]');
+          
           if (saveBtn) {
             saveBtn.onclick = function () {
-              if (isCompleted) {
-                alert("Phiếu nhập đã hoàn thành, không thể sửa.");
-                return;
-              }
+              // Get selected status
+              let newStatus = 'draft';
+              statusRadios.forEach(radio => {
+                if (radio.checked) {
+                  newStatus = radio.value;
+                }
+              });
+
               const tableRows = Table.querySelectorAll("tbody tr");
               const detailData = [];
               let isValid = true;
 
+              // Phiếu đã hoàn thành thì không cho sửa gì nữa
+              if (isCompleted) {
+                alert("Phiếu nhập đã hoàn thành, không thể chỉnh sửa.");
+                return;
+              }
+
+              // Xác nhận khi chuyển sang trạng thái hoàn thành
+              if (!isCompleted && newStatus === 'completed') {
+                if (!confirm("Bạn có chắc muốn đổi trạng thái phiếu nhập sang 'Hoàn thành'?")) {
+                  return;
+                }
+              }
+
+              // Collect detail data only if not completed or changing status
               tableRows.forEach(r => {
                 const c = r.querySelectorAll("td");
                 if (c.length >= 4) {
                   const productId = c[0].textContent.trim();
-                  const qty = parseInt(c[2].querySelector(".edit-qty").value);
-                  const inputPrice = parseInt(c[3].querySelector(".edit-input-price").value);
+                  const qtyElement = c[2].querySelector(".edit-qty");
+                  const priceElement = c[3].querySelector(".edit-input-price");
+                  
+                  if (qtyElement && priceElement) {
+                    const qty = parseInt(qtyElement.value);
+                    const inputPrice = parseInt(priceElement.value);
 
-                  if (!Number.isInteger(qty) || qty <= 0 || !Number.isFinite(inputPrice) || inputPrice <= 0) {
-                    isValid = false;
-                    return;
+                    if (!Number.isInteger(qty) || qty <= 0 || !Number.isFinite(inputPrice) || inputPrice <= 0) {
+                      isValid = false;
+                      return;
+                    }
+
+                    detailData.push({
+                      productId: productId,
+                      quantity: qty,
+                      inputPrice: inputPrice
+                    });
                   }
-
-                  detailData.push({
-                    productId: productId,
-                    quantity: qty,
-                    inputPrice: inputPrice
-                  });
                 }
               });
 
-              if (!isValid || detailData.length === 0) {
+              if (!isValid && !isCompleted) {
                 alert("Vui lòng nhập số lượng và giá nhập hợp lệ (> 0).");
                 return;
               }
 
+              // Allow status change even if no detail changes
               $.ajax({
                 url: "../controller/admin/receipt.controller.php",
                 type: "post",
@@ -805,6 +896,7 @@ const openModal = addHtml => {
                   field: {
                     id: id,
                     date_create: document.getElementById("date_create").value,
+                    status: newStatus,
                     details: detailData
                   }
                 }
@@ -820,40 +912,16 @@ const openModal = addHtml => {
               });
             };
           }
+
+          // Show/hide save button based on status
+          if (isCompleted && saveBtn) {
+            // Show save button but with status change only capability
+            saveBtn.textContent = "Lưu thay đổi";
+          }
+          if (isCompleted) {
+            document.getElementById("date_create").setAttribute("disabled", "disabled");
+          }
         },
-      });
-    });
-  });
-
-  // Đánh dấu hoàn thành phiếu nhập
-  var complete_btns = document.querySelectorAll(".actions--complete");
-  complete_btns.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      const row = this.closest("tr");
-      const id = row.querySelector(".id").innerHTML;
-      const status = row.querySelector(".receipt_status")?.getAttribute("data-status");
-      if (status === "completed") return;
-
-      if (!confirm("Xác nhận hoàn thành phiếu nhập? Sau khi hoàn thành sẽ không thể sửa.")) {
-        return;
-      }
-
-      $.ajax({
-        url: "../controller/admin/receipt.controller.php",
-        type: "post",
-        dataType: "html",
-        data: {
-          function: "complete",
-          field: { id: id }
-        }
-      }).done(function (resultText) {
-        $("#sqlresult").html(resultText);
-        setTimeout(() => {
-          $("#sqlresult").html("");
-        }, 3000);
-        loadItem();
-      }).fail(function () {
-        alert("Lỗi khi hoàn thành phiếu nhập.");
       });
     });
   });
@@ -916,7 +984,6 @@ var js = function () {
         <select id="supplier" onchange="getProductsBySupplier(this)" ">
         <!-- Options for suppliers will be dynamically added -->
       </select>
-        </select>
       </div>
       <div class="input-field">
         <label>Mã sản phẩm:</label>
@@ -938,6 +1005,23 @@ var js = function () {
         <label for="date_create_add">Ngày nhập:</label>
         <input type="date" id="date_create_add">
       </div>
+      <div class="input-field">
+        <label for="add_receipt_status">Trạng thái phiếu</label>
+        <div style="display: flex; gap: 20px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 8px; width: auto; margin: 0;">
+            <input type="radio" name="add_receipt_status_option" value="draft" id="add_status_draft" checked>
+            <span>Chưa hoàn thành</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; width: auto; margin: 0;">
+            <input type="radio" name="add_receipt_status_option" value="completed" id="add_status_completed">
+            <span>Hoàn thành</span>
+          </label>
+        </div>
+      </div>
+      <div class="input-field total-field">
+        <label for="add_total_price">Tổng tiền:</label>
+        <input type="text" id="add_total_price" value="0 ₫" readonly>
+      </div>
       <div class="form-actions">
         <button type="button"  class="btn" id="addProduct">Thêm sản phẩm</button>
         <button type="button"  onclick="deleteRow()">Xóa</button>
@@ -949,9 +1033,10 @@ var js = function () {
         <thead>
           <tr>
             <th style="width: 10%">Mã SP</th>
-            <th style=" width: 55%">Tên SP</th>
+            <th style=" width: 40%">Tên SP</th>
             <th style=" width: 15%">Số Lượng</th>
-            <th style=" width: 20%">Giá Nhập</th>
+            <th style=" width: 17%">Giá Nhập</th>
+            <th style=" width: 18%">Thành tiền</th>
           </tr>
         </thead>
         <tbody id="productTableBody">

@@ -291,8 +291,7 @@ class pagnation
 
                             echo '<td class="actions">
                                     <button class="actions--edit">Xem/Sửa</button>
-                                    <button class="actions--delete" ' . ($receiptStatus === 'completed' ? 'disabled' : '') . '>Xoá</button>
-                                    <button class="actions--complete" ' . ($receiptStatus === 'completed' ? 'disabled' : '') . '>Hoàn thành</button>
+                                    <button class="actions--delete">Xoá</button>
                                 </td>
                             </tr>';
                         }
