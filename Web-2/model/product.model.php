@@ -87,9 +87,10 @@
     }
   }
 
-  function getProductsByFilter($keyword, $listCategoryIds, $startRange, $endRange, $itemsPerPage = null, $page = null) {
+  function getProductsByFilter($keyword, $listCategoryIds, $startRange, $endRange, $minPrice = null, $maxPrice = null, $itemsPerPage = null, $page = null) {
     $database = new connectDB();
     if ($database->conn) {
+      $escapedKeyword = mysqli_real_escape_string($database->conn, trim((string)$keyword));
       $sql = "SELECT DISTINCT p.id id,
                       p.name product_name, 
                       p.price, 
@@ -100,16 +101,17 @@
               LEFT JOIN categories c ON c.id = cd.category_id
               WHERE p.status = 1   ";
       // Câu lệnh query theo tên sản phẩm
-      if ($keyword) {
-        $sql .= " AND p.name LIKE '%$keyword%'";
+      if ($escapedKeyword !== '') {
+        $sql .= " AND p.name LIKE '%$escapedKeyword%'";
       }     
       
       // Câu lệnh query theo thể loại
       if (count($listCategoryIds) > 0) {
+        $safeCategoryIds = array_map('intval', $listCategoryIds);
         $sql .= " AND (";
-        foreach ($listCategoryIds as $key => $categoryId) {
+        foreach ($safeCategoryIds as $key => $categoryId) {
           $sql .= "c.id = $categoryId";
-          if ($key < count($listCategoryIds) - 1) {
+          if ($key < count($safeCategoryIds) - 1) {
             $sql .= " OR ";
           }
         }
@@ -117,7 +119,17 @@
       }
 
       // Câu lệnh query theo khoảng giá
-      if (($startRange == 0 || $startRange) && $endRange) {
+      if ($minPrice !== null && $maxPrice !== null) {
+        $minPrice = intval($minPrice);
+        $maxPrice = intval($maxPrice);
+        $sql .= " AND p.price BETWEEN $minPrice AND $maxPrice";
+      } else if ($minPrice !== null) {
+        $minPrice = intval($minPrice);
+        $sql .= " AND p.price >= $minPrice";
+      } else if ($maxPrice !== null) {
+        $maxPrice = intval($maxPrice);
+        $sql .= " AND p.price <= $maxPrice";
+      } else if (($startRange == 0 || $startRange) && $endRange) {
         $sql .= " AND price BETWEEN $startRange AND $endRange";
       }
 
@@ -129,6 +141,8 @@
       }
 
       if ($itemsPerPage && $page) {
+        $itemsPerPage = intval($itemsPerPage);
+        $page = intval($page);
         $offset = ($page - 1) * $itemsPerPage;
         $sql .= " LIMIT $itemsPerPage OFFSET $offset;";
       }

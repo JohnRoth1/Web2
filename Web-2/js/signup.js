@@ -131,7 +131,7 @@ const validationFormDangKy = () => {
   let isNotEmptyFullname = false;
   let isNotEmptyEmail = false;
   let isNotEmptyPhoneNumber = false;
-  let isNotEmptyAddress = false;
+  let isNotEmptyAddress = true;
   let isNotEmptyPassword = false;
   let isNotEmptyConfirmPassword = false;
   let isNotEmptyCity = false;
@@ -140,7 +140,6 @@ const validationFormDangKy = () => {
 
   const regexFullName = /[a-zA-ZÀ-ỹ]+(\s[a-zA-ZÀ-ỹ]+){1,}$/;
   const regexPhoneNumber = /^0[0-9]{9}$/;
-  const regexAddress = /^\d+\/?\d+(\s[a-zA-ZÀ-ỹ]+){2,}$/;
   const regexUsername = /^[a-zA-Z][a-zA-Z0-9]{7,}$/;
   const regexEmail =
     /^(([A-Za-z0-9]+((\.|\-|\_|\+)?[A-Za-z0-9]?)*[A-Za-z0-9]+)|[A-Za-z0-9]+)@(([A-Za-z0-9]+)+((\.|\-|\_)?([A-Za-z0-9]+)+)*)+\.([A-Za-z]{2,})+$/;
@@ -198,18 +197,8 @@ const validationFormDangKy = () => {
     isNotEmptyPhoneNumber = true;
   }
 
-  if (registerAddress.value.trim() == "") {
-    errMessageAddressRegister.innerText = "Vui lòng điền địa chỉ";
-    isNotEmptyAddress = false;
-  } else if (!regexAddress.test(registerAddress.value.trim())) {
-    errMessageAddressRegister.innerText =
-      "Nhập địa chỉ đúng định dạng (ví dụ: 273 An Dương Vương)";
-    registerAddress.focus();
-    isNotEmptyAddress = false;
-  } else {
-    errMessageAddressRegister.innerText = "";
-    isNotEmptyAddress = true;
-  }
+  // Địa chỉ không bắt buộc và không ràng buộc định dạng.
+  errMessageAddressRegister.innerText = "";
 
   if (registerPassword.value.trim() == "") {
     errMessagePasswordRegister.innerText = "Vui lòng điền mật khẩu";

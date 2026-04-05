@@ -2,22 +2,21 @@ const itemsPerPage = 8;
 const modelPath = "../model";
 let listCategoryIds = [];
 let priceRange = null;
-let keyword = null;
+let keyword = "";
+let minPrice = null;
+let maxPrice = null;
+let categoryId = "";
 
 // Hàm để render HTML của mỗi sản phẩm
 function renderProductHTML(data) {
   let productHTML = '<div class="collection-product-list">';
 
   data.products.forEach((product) => {
-    const formatPrice = parseInt(product.price).toLocaleString("vi-VN", {
+    const formatPrice = parseInt(product.price, 10).toLocaleString("vi-VN", {
       style: "currency",
       currency: "VND",
     });
 
-    // let notAllowed = "";
-    // if (product.quantity <= 0) {
-    //   notAllowed = "notAllowed";
-    // }
     productHTML += `
       <div class="product-item--wrapper">
         <div class="product-item">
@@ -30,7 +29,7 @@ function renderProductHTML(data) {
                 <input type="hidden" class="productId" value="${
                   product.id || product.product_id
                 }"/>
-                <button class="product-action--btn product-action__addToCart ">Thêm vào giỏ</button>
+                <button class="product-action--btn product-action__addToCart">Thêm vào giỏ</button>
               </div>
             </div>
             <div class="img-resize">
@@ -74,7 +73,7 @@ function renderPaginationHTML(data, itemsPerPage) {
     paginationHTML += "...";
   }
 
-  for (let i = 1; i <= totalPage; i++) {
+  for (let i = 1; i <= totalPage; i += 1) {
     const isActive = data.page === i ? "active" : "";
     if (i < data.page + 3 && i > data.page - 3) {
       paginationHTML += `<button class="pagination-btn ${isActive}" data="${i}">${i}</button>`;
@@ -98,13 +97,154 @@ function renderPaginationHTML(data, itemsPerPage) {
   return paginationHTML;
 }
 
+function normalizePriceValue(value) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const numericValue = String(value).replace(/[^0-9]/g, "");
+  if (numericValue === "") {
+    return null;
+  }
+
+  const parsed = parseInt(numericValue, 10);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    return null;
+  }
+  return parsed;
+}
+
+function formatNumberWithComma(value) {
+  const normalized = normalizePriceValue(value);
+  if (normalized === null) {
+    return "";
+  }
+  return normalized.toLocaleString("en-US");
+}
+
+function syncStateFromAdvancedPanel() {
+  keyword = $("#advancedKeyword").val().trim();
+  categoryId = $("#advancedCategory").val();
+  minPrice = normalizePriceValue($("#priceMin").val());
+  maxPrice = normalizePriceValue($("#priceMax").val());
+
+  if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) {
+    const temp = minPrice;
+    minPrice = maxPrice;
+    maxPrice = temp;
+    $("#priceMin").val(formatNumberWithComma(minPrice));
+    $("#priceMax").val(formatNumberWithComma(maxPrice));
+  }
+}
+
+function storeAdvancedFilters() {
+  localStorage.setItem("keyword", keyword || "");
+  localStorage.setItem("listCategoryIds", JSON.stringify(listCategoryIds));
+  localStorage.setItem("advancedCategoryId", categoryId || "");
+
+  if (priceRange) {
+    localStorage.setItem("priceRange", priceRange);
+  } else {
+    localStorage.removeItem("priceRange");
+  }
+
+  if (minPrice !== null) {
+    localStorage.setItem("minPrice", minPrice);
+  } else {
+    localStorage.removeItem("minPrice");
+  }
+
+  if (maxPrice !== null) {
+    localStorage.setItem("maxPrice", maxPrice);
+  } else {
+    localStorage.removeItem("maxPrice");
+  }
+}
+
+function restoreAdvancedFilters() {
+  if (localStorage.getItem("listCategoryIds")) {
+    listCategoryIds = JSON.parse(localStorage.getItem("listCategoryIds"));
+    listCategoryIds.forEach((id) => {
+      $("input[name='theloai'][data='" + id + "']").prop("checked", true);
+    });
+  }
+
+  if (localStorage.getItem("priceRange")) {
+    priceRange = localStorage.getItem("priceRange");
+    $("input[name='giaban'][data='" + priceRange + "']")
+      .prop("checked", true)
+      .attr("checked", "checked");
+  }
+
+  if (localStorage.getItem("keyword")) {
+    keyword = localStorage.getItem("keyword");
+  }
+
+  if (localStorage.getItem("advancedCategoryId")) {
+    categoryId = localStorage.getItem("advancedCategoryId");
+  }
+
+  if (localStorage.getItem("minPrice")) {
+    minPrice = normalizePriceValue(localStorage.getItem("minPrice"));
+  }
+
+  if (localStorage.getItem("maxPrice")) {
+    maxPrice = normalizePriceValue(localStorage.getItem("maxPrice"));
+  }
+
+  $("#advancedKeyword").val(keyword);
+  $("#advancedCategory").val(categoryId);
+  $("#priceMin").val(minPrice !== null ? formatNumberWithComma(minPrice) : "");
+  $("#priceMax").val(maxPrice !== null ? formatNumberWithComma(maxPrice) : "");
+
+  if (document.querySelector("#searchInput")) {
+    document.querySelector("#searchInput").value = keyword;
+  }
+}
+
+function resetFilter() {
+  const ckbs = document.querySelectorAll(".advanced-checkbox-list input[type='checkbox']");
+  ckbs.forEach((ckb) => {
+    ckb.checked = false;
+    ckb.removeAttribute("checked");
+  });
+
+  listCategoryIds = [];
+  priceRange = null;
+  keyword = "";
+  minPrice = null;
+  maxPrice = null;
+  categoryId = "";
+
+  $("#advancedKeyword").val("");
+  $("#advancedCategory").val("");
+  $("#priceMin").val("");
+  $("#priceMax").val("");
+
+  if (document.querySelector("#searchInput")) {
+    document.querySelector("#searchInput").value = "";
+  }
+
+  localStorage.removeItem("listCategoryIds");
+  localStorage.removeItem("priceRange");
+  localStorage.removeItem("keyword");
+  localStorage.removeItem("advancedCategoryId");
+  localStorage.removeItem("minPrice");
+  localStorage.removeItem("maxPrice");
+}
+
+function uncheckPriceRange(currentCkb) {
+  const ckbs = document.querySelectorAll("input[type='checkbox'][name='giaban']");
+  ckbs.forEach((ckb) => {
+    if (ckb !== currentCkb) {
+      ckb.checked = false;
+      ckb.removeAttribute("checked");
+    }
+  });
+}
+
 // Hàm để render dữ liệu sản phẩm và phân trang (AJAX)
-function renderProductsPerPage(
-  currentPage,
-  listCategoryIds = null,
-  priceRange = null,
-  keyword = null
-) {
+function renderProductsPerPage(currentPage) {
   $.ajax({
     url: "controller/product.controller.php",
     type: "post",
@@ -115,16 +255,18 @@ function renderProductsPerPage(
       itemsPerPage,
       currentPage,
       keyword,
+      categoryId,
+      minPrice,
+      maxPrice,
       modelPath,
     },
-  }).done(function (result) {
+  }).done((result) => {
     const data = JSON.parse(result);
     try {
       if (data.success) {
         const productHTML = renderProductHTML(data);
         const paginationHTML = renderPaginationHTML(data, itemsPerPage);
-        let html = `${productHTML}${paginationHTML}`;
-        $(".result").html(html);
+        $(".result").html(`${productHTML}${paginationHTML}`);
       } else {
         $(".result").html(data.message);
       }
@@ -134,70 +276,61 @@ function renderProductsPerPage(
   });
 }
 
-$(document).ready(function () {
-  // Khôi phục bộ lọc từ localStorage khi tải trang
-  if (localStorage.getItem("listCategoryIds")) {
-    listCategoryIds = JSON.parse(localStorage.getItem("listCategoryIds"));
-    listCategoryIds.forEach((id) => {
-      $(`input[name="theloai"][data="${id}"]`).prop("checked", true);
-    });
-  }
-  if (localStorage.getItem("priceRange")) {
-    priceRange = localStorage.getItem("priceRange");
-    $(`input[name="giaban"][data="${priceRange}"]`)
-      .prop("checked", true)
-      .attr("checked", "checked");
-  }
+$(document).ready(() => {
+  restoreAdvancedFilters();
+  renderProductsPerPage(1);
 
-  // Tự load sản phẩm ở lần đầu vào trang
-  if (!localStorage.getItem("keyword")) {
-    renderProductsPerPage(1, listCategoryIds, priceRange, keyword);
-  } else {
-    keyword = localStorage.getItem("keyword");
-    renderProductsPerPage(1, listCategoryIds, priceRange, keyword);
-    document.querySelector("#searchInput").value = keyword;
-  }
-
-  // Sử dụng Event Delegation cho các nút phân trang
-  $(document).on("click", ".pagination-btn", function () {
-    $(".pagination-btn").removeClass("active");
-    $(this).addClass("active");
-
-    var current_page = $(this).attr("data");
-    renderProductsPerPage(current_page, listCategoryIds, priceRange, keyword);
+  $(".btn-toggle-advanced-search").click(() => {
+    $(".advanced-search-panel").toggleClass("hide");
   });
 
-  // Xử lý click nút search trong product.js
-  $("#searchButton").click(function (e) {
-    e.preventDefault(); // Prevent default if form submission handles it
-    keyword = document.querySelector("#searchInput").value;
-    localStorage.setItem("keyword", keyword); // Store keyword
-    renderProductsPerPage(1, listCategoryIds, priceRange, keyword);
+  $(".btn-apply-advanced-filter").click(() => {
+    syncStateFromAdvancedPanel();
+
+    // Khi dùng giá từ/đến thì bỏ preset giá
+    if (minPrice !== null || maxPrice !== null) {
+      priceRange = null;
+      $("input[name='giaban']").prop("checked", false).removeAttr("checked");
+    }
+
+    storeAdvancedFilters();
+    renderProductsPerPage(1);
   });
 
-  // Xử lý nút Reset
-  $(".reset_theloai").click(function (e) {
-    e.preventDefault(); // Ngăn reload mặc định của thẻ <a>
-    console.log("Đã nhấn nút reset thể loại"); // Ghi log ra console
-    resetFilter(); // Gọi hàm reset
-    renderProductsPerPage(1); // Render lại danh sách sản phẩm không có bộ lọc
+  $(".btn-reset-advanced-filter").click(() => {
+    resetFilter();
+    renderProductsPerPage(1);
   });
 
-  // Lọc nâng cao theo thể loại
-  $('input[name="theloai"]').click(function () {
+  $("#advancedKeyword, #priceMin, #priceMax").on("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      $(".btn-apply-advanced-filter").click();
+    }
+  });
+
+  $("#priceMin, #priceMax").on("input", function () {
+    const formattedValue = formatNumberWithComma($(this).val());
+    $(this).val(formattedValue);
+  });
+
+  $("input[name='theloai']").click(function () {
     const categoryIdData = $(this).attr("data");
     if ($(this).is(":checked")) {
-      listCategoryIds.push(+categoryIdData);
+      if (!listCategoryIds.includes(+categoryIdData)) {
+        listCategoryIds.push(+categoryIdData);
+      }
     } else {
       listCategoryIds = listCategoryIds.filter(
-        (categoryId) => categoryId != categoryIdData
+        (categoryId) => categoryId !== +categoryIdData
       );
     }
-    renderProductsPerPage(1, listCategoryIds, priceRange, keyword);
+
+    storeAdvancedFilters();
+    renderProductsPerPage(1);
   });
 
-  // Lọc nâng cao theo giá tiền
-  $('input[name="giaban"]').click(function () {
+  $("input[name='giaban']").click(function () {
     priceRange = $(this).attr("data");
 
     if ($(this).attr("checked")) {
@@ -208,7 +341,34 @@ $(document).ready(function () {
       uncheckPriceRange($(this)[0]);
     }
 
-    renderProductsPerPage(1, listCategoryIds, priceRange, keyword);
+    // Khi chọn giá preset thì xóa giá nhập tay
+    minPrice = null;
+    maxPrice = null;
+    $("#priceMin").val("");
+    $("#priceMax").val("");
+
+    storeAdvancedFilters();
+    renderProductsPerPage(1);
+  });
+
+  $("#advancedCategory").change(() => {
+    syncStateFromAdvancedPanel();
+    storeAdvancedFilters();
+    renderProductsPerPage(1);
+  });
+
+  $(document).on("click", ".pagination-btn", function () {
+    const currentPage = $(this).attr("data");
+    renderProductsPerPage(currentPage);
+  });
+
+  // Giữ nguyên tìm kiếm cơ bản ở header và đồng bộ vào panel nâng cao
+  $("#searchButton").click((event) => {
+    event.preventDefault();
+    keyword = document.querySelector("#searchInput").value.trim();
+    $("#advancedKeyword").val(keyword);
+    storeAdvancedFilters();
+    renderProductsPerPage(1);
   });
 
   // Xử lý add to Cart
@@ -227,55 +387,19 @@ $(document).ready(function () {
   });
 });
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
   const logoLinks = document.querySelectorAll(".logo-link");
 
   logoLinks.forEach((logo) => {
-    logo.addEventListener("click", function (e) {
-      e.preventDefault();
-      console.log("Logo clicked - resetting filter");
-      resetFilter(); // Gọi hàm reset
+    logo.addEventListener("click", (event) => {
+      event.preventDefault();
+      resetFilter();
       setTimeout(() => {
         window.location.href = "index.php";
-      }, 50); // Chờ 1 chút để đảm bảo reset xong
+      }, 50);
     });
   });
 });
-
-// Xử lý reset lọc
-function resetFilter() {
-  const ckbs = document.querySelectorAll(
-    '.sidebar-item__list li input[type="checkbox"]'
-  );
-  ckbs.forEach((ckb) => {
-    if (ckb.checked) {
-      ckb.checked = false;
-      ckb.removeAttribute("checked"); // Đảm bảo xóa thuộc tính checked
-    }
-  });
-  listCategoryIds = [];
-  priceRange = null;
-  keyword = null; // Reset cả keyword nếu cần
-  localStorage.removeItem("listCategoryIds");
-  localStorage.removeItem("priceRange");
-  localStorage.removeItem("keyword"); // Xóa keyword trong localStorage
-  if (document.querySelector("#searchInput")) {
-    document.querySelector("#searchInput").value = ""; // Xóa nội dung ô tìm kiếm
-  }
-}
-
-function uncheckPriceRange(currentCkb) {
-  const ckbs = document.querySelectorAll(
-    '.sidebar-item__list li input[type="checkbox"][name="giaban"]'
-  );
-
-  ckbs.forEach((ckb) => {
-    if (ckb != currentCkb) {
-      ckb.checked = false;
-      ckb.removeAttribute("checked");
-    }
-  });
-}
 
 // Function xử lý addToCart
 function addToCart(productId, amount) {
@@ -285,11 +409,11 @@ function addToCart(productId, amount) {
     dataType: "html",
     data: {
       "product-action__addToCart": true,
-      productId: productId,
-      amount: amount,
+      productId,
+      amount,
     },
-  }).done(function (result) {
-    let data = JSON.parse(result);
+  }).done((result) => {
+    const data = JSON.parse(result);
     if (!data.success) {
       window.location.href = "index.php?page=signup";
       alert("Vui lòng đăng nhập để có thể thêm sản phẩm!");

@@ -72,7 +72,6 @@ body {
   cursor: pointer;
   font-size: 14px;
   font-weight: bold;
-  cursor: pointer;
   text-decoration: none;
   color: #333;
 }
@@ -114,6 +113,91 @@ body {
   background-color: #fff;
   border-radius: 5px;
   overflow: hidden;
+}
+
+.advanced-search-box {
+  margin-bottom: 18px;
+}
+
+.btn-toggle-advanced-search {
+  border: none;
+  border-radius: 4px;
+  background: var(--primary-color);
+  color: #fff;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-toggle-advanced-search:hover {
+  opacity: 0.9;
+}
+
+.advanced-search-panel {
+  margin-top: 12px;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  background: #fafafa;
+  padding: 14px;
+}
+
+.advanced-search-panel.hide {
+  display: none;
+}
+
+.advanced-search-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.advanced-search-field label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.advanced-search-field input,
+.advanced-search-field select {
+  width: 100%;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  padding: 8px 10px;
+  outline: none;
+  background: #fff;
+}
+
+.advanced-search-field input:focus,
+.advanced-search-field select:focus {
+  border-color: var(--primary-color);
+}
+
+.advanced-search-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+}
+
+.btn-apply-advanced-filter,
+.btn-reset-advanced-filter {
+  border: none;
+  border-radius: 4px;
+  padding: 9px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-apply-advanced-filter {
+  background-color: var(--primary-color);
+  color: #fff;
+}
+
+.btn-reset-advanced-filter {
+  background-color: #ececec;
+  color: #222;
 }
 
 .collection-top-bar {

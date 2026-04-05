@@ -61,6 +61,14 @@
   // Xử lý render sản phẩm (page=product)
   if (isset($_POST['currentPage']) && isset($_POST['itemsPerPage'])) {
     $listCategoryIds = [];
+
+    if (isset($_POST['categoryId']) && $_POST['categoryId'] !== '') {
+      $singleCategoryId = intval($_POST['categoryId']);
+      if ($singleCategoryId > 0) {
+        $listCategoryIds[] = $singleCategoryId;
+      }
+    }
+
     if(isset($_POST['listCategoryIds'])) {
       if(is_array($_POST['listCategoryIds']) && count($_POST['listCategoryIds']) > 0) {
         foreach($_POST['listCategoryIds'] as $categoryId) {
@@ -69,25 +77,51 @@
       }
     }
 
-    $priceRange= $_POST['priceRange'];
-    $itemsPerPage = $_POST['itemsPerPage'];
-    $keyword = $_POST['keyword'];
+    $priceRange = isset($_POST['priceRange']) ? $_POST['priceRange'] : null;
+    $itemsPerPage = intval($_POST['itemsPerPage']);
+    $keyword = isset($_POST['keyword']) ? trim($_POST['keyword']) : '';
+    $rawMinPrice = isset($_POST['minPrice']) ? preg_replace('/[^0-9]/', '', $_POST['minPrice']) : '';
+    $rawMaxPrice = isset($_POST['maxPrice']) ? preg_replace('/[^0-9]/', '', $_POST['maxPrice']) : '';
+    $minPrice = ($rawMinPrice !== '') ? intval($rawMinPrice) : null;
+    $maxPrice = ($rawMaxPrice !== '') ? intval($rawMaxPrice) : null;
     $page = intval($_POST['currentPage']);
     
     $startRange = 0;
     $endRange = 0;
 
+    if ($itemsPerPage <= 0) {
+      $itemsPerPage = 8;
+    }
+
+    if ($page <= 0) {
+      $page = 1;
+    }
+
+    if ($minPrice !== null && $minPrice < 0) {
+      $minPrice = null;
+    }
+
+    if ($maxPrice !== null && $maxPrice < 0) {
+      $maxPrice = null;
+    }
+
+    if ($minPrice !== null && $maxPrice !== null && $minPrice > $maxPrice) {
+      $temp = $minPrice;
+      $minPrice = $maxPrice;
+      $maxPrice = $temp;
+    }
+
     // Gán giá trị lại cho startRange && endRange nếu có chọn lọc theo giá
-    if ($priceRange == 'duoi50') {
+    if ($minPrice === null && $maxPrice === null && $priceRange == 'duoi50') {
       $startRange = 0;
       $endRange = 49000;
-    } else if ($priceRange == 'tu50duoi100') {
+    } else if ($minPrice === null && $maxPrice === null && $priceRange == 'tu50duoi100') {
       $startRange = 50000;
       $endRange = 100000;
-    } else if ($priceRange == 'tu100duoi200') {
+    } else if ($minPrice === null && $maxPrice === null && $priceRange == 'tu100duoi200') {
       $startRange = 100000;
       $endRange = 200000;
-    } else if ($priceRange == 'tren200') {
+    } else if ($minPrice === null && $maxPrice === null && $priceRange == 'tren200') {
       $startRange = 200001;
       $endRange = 1000000000;
     } else {
@@ -95,8 +129,9 @@
       $endRange = 0;
     }
     
-    $amountProduct = getProductsByFilter($keyword, $listCategoryIds, $startRange, $endRange, null, null)->num_rows;
-    $result = getProductsByFilter($keyword, $listCategoryIds, $startRange, $endRange, $itemsPerPage, $page);
+    $filterResult = getProductsByFilter($keyword, $listCategoryIds, $startRange, $endRange, $minPrice, $maxPrice, null, null);
+    $amountProduct = ($filterResult !== false) ? $filterResult->num_rows : 0;
+    $result = getProductsByFilter($keyword, $listCategoryIds, $startRange, $endRange, $minPrice, $maxPrice, $itemsPerPage, $page);
 
     if ($result && $result->num_rows > 0) {
       $products = $result->fetch_all(MYSQLI_ASSOC);

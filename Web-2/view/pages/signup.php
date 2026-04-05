@@ -80,8 +80,8 @@
                         <p class="errMessage errMessageWardRegister"></p>
                     </div>
                     <div class="form-row">
-                        <label for="address">Số nhà và tên đường (VD: 273 An Dương Vương)</label>
-                        <input type="text" placeholder="Nhập số nhà và tên đường" id="registerAddress" name="address" required>
+                        <label for="address">Số nhà và tên đường (không bắt buộc)</label>
+                        <input type="text" placeholder="Nhập số nhà và tên đường" id="registerAddress" name="address">
                         <p class="errMessage errMessageAddressRegister"></p>
                     </div>
                     <div class="form-row form-row-48">

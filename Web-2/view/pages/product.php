@@ -43,7 +43,7 @@ $current_page = 1;
             foreach ($categories as $category) {
               echo '
                 <li>
-                  <input type="checkbox" id="theloai_' . $category['id'] . '" data="' . $category['id'] . '" name="theloai"/><label for="theloai_' . $category['id'] . '">' . $category['name'] . '</label>
+                  <input type="checkbox" id="theloai_' . $category['id'] . '" data="' . $category['id'] . '" name="theloai"/><label for="theloai_' . $category['id'] . '">' . trim($category['name']) . '</label>
                 </li>';
             }
             ?>
@@ -73,6 +73,45 @@ $current_page = 1;
 
       <!-- Start: Main collection -->
       <div class="main-collection">
+        <div class="advanced-search-box">
+          <button type="button" class="btn-toggle-advanced-search">
+            <i class="fa-solid fa-sliders"></i> Tìm kiếm nâng cao
+          </button>
+
+          <div class="advanced-search-panel hide">
+            <div class="advanced-search-grid">
+              <div class="advanced-search-field">
+                <label for="advancedKeyword">Tên sản phẩm</label>
+                <input type="text" id="advancedKeyword" placeholder="Nhập tên sản phẩm" />
+              </div>
+              <div class="advanced-search-field">
+                <label for="advancedCategory">Danh mục</label>
+                <select id="advancedCategory">
+                  <option value="">Tất cả danh mục</option>
+                  <?php
+                  $categories = getCategoryList();
+                  foreach ($categories as $category) {
+                    echo '<option value="' . $category['id'] . '">' . trim($category['name']) . '</option>';
+                  }
+                  ?>
+                </select>
+              </div>
+              <div class="advanced-search-field">
+                <label for="priceMin">Giá từ</label>
+                <input type="text" id="priceMin" inputmode="numeric" placeholder="VD: 50,000" />
+              </div>
+              <div class="advanced-search-field">
+                <label for="priceMax">Giá đến</label>
+                <input type="text" id="priceMax" inputmode="numeric" placeholder="VD: 200,000" />
+              </div>
+            </div>
+            <div class="advanced-search-actions">
+              <button type="button" class="btn-apply-advanced-filter">Áp dụng</button>
+              <button type="button" class="btn-reset-advanced-filter">Đặt lại</button>
+            </div>
+          </div>
+        </div>
+
         <div class="result"></div>
       </div>
       <!-- End: Main collection -->

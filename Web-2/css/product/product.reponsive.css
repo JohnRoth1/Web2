@@ -39,6 +39,14 @@
     margin-bottom: 35px;
   }
 
+  .advanced-search-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .advanced-search-actions {
+    flex-direction: column;
+  }
+
   /* Modal */
   .modal-container {
     height: auto;
