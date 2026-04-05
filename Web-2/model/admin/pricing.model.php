@@ -136,48 +136,31 @@ function pricing_increaseProfitMarginAll($increase_percent)
     ];
   }
 
-  // Lấy toàn bộ sản phẩm đang hoạt động cùng % lợi nhuận hiện tại
-  $sqlProducts = "SELECT id, profit_margin FROM products WHERE status = 1 ORDER BY id ASC";
-  $result = $database->query($sqlProducts);
+  // Ghi đè % lợi nhuận cho tất cả sản phẩm đang hoạt động
+  $new_margin_safe = mysqli_real_escape_string($database->conn, strval($increase_ratio));
 
-  if (!$result) {
-    $err = $database->conn->error;
-    $database->close();
-    return [
-      'success' => false,
-      'message' => 'Không thể lấy danh sách sản phẩm: ' . $err
-    ];
-  }
+  $sql_update = "UPDATE products 
+                 SET profit_margin = '$new_margin_safe', update_date = '$date' 
+                 WHERE status = 1";
 
-  $updated = 0;
-  $skippedNoCost = 0;
-  $failed = 0;
-
-  while ($row = mysqli_fetch_assoc($result)) {
-    $product_id = $row['id'];
-    $current_margin = isset($row['profit_margin']) ? floatval($row['profit_margin']) : 0;
-    $new_margin = $current_margin + $increase_ratio;
-
-    $product_id_safe = mysqli_real_escape_string($database->conn, $product_id);
-    $new_margin_safe = mysqli_real_escape_string($database->conn, strval($new_margin));
-
-    $sql_update = "UPDATE products 
-                   SET profit_margin = '$new_margin_safe', update_date = '$date' 
-                   WHERE id = '$product_id_safe'";
-
-    $ok = $database->execute($sql_update);
-    if ($ok) $updated++;
-    else $failed++;
-  }
+  $ok = $database->execute($sql_update);
+  $updated = $ok ? mysqli_affected_rows($database->conn) : 0;
 
   $database->close();
+
+  if (!$ok) {
+    return [
+      'success' => false,
+      'message' => 'Không thể cập nhật % lợi nhuận'
+    ];
+  }
 
   return [
     'success' => true,
     'increase_percent' => $increase,
     'updated' => $updated,
-    'skipped_no_cost' => $skippedNoCost,
-    'failed' => $failed
+    'skipped_no_cost' => 0,
+    'failed' => 0
   ];
 }
 

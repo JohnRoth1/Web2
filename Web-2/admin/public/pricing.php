@@ -96,9 +96,9 @@ $_SESSION["render"]->setTable("products");
             <div class="margin-form">
                 <div class="form-group-inline">
                     <div class="form-group">
-                        <label>Tăng % lợi nhuận (%):</label>
+                        <label>Đặt % lợi nhuận (%):</label>
                         <input type="number" id="profitMarginIncrease" placeholder="Nhập số %" min="0" step="0.1" />
-                        <small>Tất cả sản phẩm sẽ được tăng % lợi nhuận thêm</small>
+                        <small>Tất cả sản phẩm sẽ được ghi đè % lợi nhuận thành giá trị này</small>
                     </div>
                     <div class="form-actions">
                         <button class="btn-save" id="btnIncreaseProfitMargin">

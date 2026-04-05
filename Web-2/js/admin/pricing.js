@@ -247,7 +247,7 @@ function initializeEventListeners() {
       return;
     }
 
-    const ok = confirm(`Áp dụng tăng thêm ${increase}% lợi nhuận cho TẤT CẢ sản phẩm?\n\nLưu ý: Sẽ cập nhật giá bán hàng loạt và không thể hoàn tác tự động.`);
+    const ok = confirm(`Đặt % lợi nhuận thành ${increase}% cho TẤT CẢ sản phẩm?\n\nLưu ý: Sẽ ghi đè % lợi nhuận hiện tại và không thể hoàn tác tự động.`);
     if (!ok) return;
 
     $.ajax({
@@ -261,9 +261,8 @@ function initializeEventListeners() {
     }).done(function (result) {
       if (result && result.success) {
         alert(
-          `Đã áp dụng tăng ${result.increase_percent}% lợi nhuận cho tất cả sản phẩm.\n\n` +
+          `Đã đặt % lợi nhuận thành ${result.increase_percent}% cho tất cả sản phẩm.\n\n` +
           `Cập nhật: ${result.updated}\n` +
-          `Bỏ qua (không có giá nhập bình quân): ${result.skipped_no_cost}\n` +
           `Thất bại: ${result.failed}`
         );
         $("#profitMarginIncrease").val("");
