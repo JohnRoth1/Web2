@@ -71,15 +71,18 @@ const districtSelect = document.querySelector("#quanhuyen");
 const wardSelect = document.querySelector("#phuongxa");
 
 function autoFillOutWhenUpdateAdress(btn) {
- const parentEle = btn.parentNode;
+ const parentEle = btn.closest(".address-select");
  const userInfoId = parentEle.querySelector(".userInfoIdSelect").value;
  const fullname = parentEle.querySelector(".name").innerHTML;
  var phoneNumber = parentEle.querySelector(".sdt").innerHTML;
  phoneNumber = phoneNumber.replace("(+84) ", "0");
  const address = parentEle.querySelector(".diachi").innerHTML;
- const city = document.querySelector(".userInfoCity").value;
- const district = document.querySelector(".userInfoDistrict").value;
- const ward = document.querySelector(".userInfoWard").value;
+ const cityInput = parentEle.querySelector(".userInfoCity");
+ const districtInput = parentEle.querySelector(".userInfoDistrict");
+ const wardInput = parentEle.querySelector(".userInfoWard");
+ const city = cityInput ? cityInput.value : "";
+ const district = districtInput ? districtInput.value : "";
+ const ward = wardInput ? wardInput.value : "";
 
  updateUserInfoId.value = userInfoId;
  updateFullname.value = fullname;
