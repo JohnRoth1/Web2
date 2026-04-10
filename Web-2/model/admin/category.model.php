@@ -6,28 +6,43 @@ include_once("{$base_dir}connect.php");
 $database = new connectDB();
 function category_delete($id)
 {
+  $id = (int)$id;
   $date = date('Y-m-d', time());
   global $database;
-  $sql = "SELECT * FROM categories WHERE id= ". $id ."";
+  $sql = "SELECT * FROM categories WHERE id = $id";
   $result = $database->query($sql);
   $row = $result->fetch_assoc();
 
   if ($row != null) {
-    $sql = "UPDATE categories
-    SET status = ". 0 .", delete_date = '". $date ."' WHERE id = ". $id ."";
-  $result = $database->execute($sql);
-  if($result) {
-    $result = "<span class='success'>Xoá thể loại thành công</span>";
-  } else {
-    $result = "<span class='failed'>Xoá thể loại không thành công</span>";
-  }
-  return $result;
-  } else {
-     return $result = "<span class='failed'>Thể loại '. $id .' không tồn tại</span>";
-  }
-  
+    // Kiểm tra thể loại có đang gán cho sản phẩm nào không
+    $sqlCheckProduct = "SELECT COUNT(*) AS cnt FROM category_details WHERE category_id = $id";
+    $resProduct = $database->query($sqlCheckProduct);
+    $rowProduct = $resProduct->fetch_assoc();
+    if ($rowProduct['cnt'] > 0) {
+      return "<span class='failed'>Không thể xoá: thể loại đang được gán cho sản phẩm</span>";
+    }
 
+    // Kiểm tra có đơn hàng nào chứa sản phẩm thuộc thể loại này không
+    $sqlCheckOrder = "SELECT COUNT(*) AS cnt
+                      FROM order_details od
+                      INNER JOIN category_details cd ON cd.product_id = od.product_id
+                      WHERE cd.category_id = $id";
+    $resOrder = $database->query($sqlCheckOrder);
+    $rowOrder = $resOrder->fetch_assoc();
+    if ($rowOrder['cnt'] > 0) {
+      return "<span class='failed'>Không thể xoá: có đơn hàng chứa sản phẩm thuộc thể loại này</span>";
+    }
 
+    $sql = "UPDATE categories SET status = 0, delete_date = '$date' WHERE id = $id";
+    $result = $database->execute($sql);
+    if ($result) {
+      return "<span class='success'>Xoá thể loại thành công</span>";
+    } else {
+      return "<span class='failed'>Xoá thể loại không thành công</span>";
+    }
+  } else {
+    return "<span class='failed'>Thể loại $id không tồn tại</span>";
+  }
 }
 
 function category_create($field)
