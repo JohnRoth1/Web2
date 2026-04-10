@@ -1001,27 +1001,6 @@ var js = function () {
         <label for="inputPrice">Giá nhập (VNĐ):</label>
         <input type="text" id="inputPrice" inputmode="numeric" placeholder="Nhập giá nhập">
       </div>
-      <div class="input-field">
-        <label for="date_create_add">Ngày nhập:</label>
-        <input type="date" id="date_create_add">
-      </div>
-      <div class="input-field">
-        <label for="add_receipt_status">Trạng thái phiếu</label>
-        <div style="display: flex; gap: 20px; align-items: center;">
-          <label style="display: flex; align-items: center; gap: 8px; width: auto; margin: 0;">
-            <input type="radio" name="add_receipt_status_option" value="draft" id="add_status_draft" checked>
-            <span>Chưa hoàn thành</span>
-          </label>
-          <label style="display: flex; align-items: center; gap: 8px; width: auto; margin: 0;">
-            <input type="radio" name="add_receipt_status_option" value="completed" id="add_status_completed">
-            <span>Hoàn thành</span>
-          </label>
-        </div>
-      </div>
-      <div class="input-field total-field">
-        <label for="add_total_price">Tổng tiền:</label>
-        <input type="text" id="add_total_price" value="0 ₫" readonly>
-      </div>
       <div class="form-actions">
         <button type="button"  class="btn" id="addProduct">Thêm sản phẩm</button>
         <button type="button"  onclick="deleteRow()">Xóa</button>
@@ -1043,6 +1022,27 @@ var js = function () {
           <!-- Products added will be shown here -->
         </tbody>
       </table>
+    </div>
+    <div class="input-field">
+      <label for="date_create_add">Ngày nhập:</label>
+      <input type="date" id="date_create_add">
+    </div>
+    <div class="input-field">
+      <label for="add_receipt_status">Trạng thái phiếu</label>
+      <div style="display: flex; gap: 20px; align-items: center;">
+        <label style="display: flex; align-items: center; gap: 8px; width: auto; margin: 0;">
+          <input type="radio" name="add_receipt_status_option" value="draft" id="add_status_draft" checked>
+          <span>Chưa hoàn thành</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 8px; width: auto; margin: 0;">
+          <input type="radio" name="add_receipt_status_option" value="completed" id="add_status_completed">
+          <span>Hoàn thành</span>
+        </label>
+      </div>
+    </div>
+    <div class="input-field total-field">
+      <label for="add_total_price">Tổng tiền:</label>
+      <input type="text" id="add_total_price" value="0 ₫" readonly>
     </div>
   </div>`;
   let flag = false;
